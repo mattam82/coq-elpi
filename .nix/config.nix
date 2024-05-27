@@ -61,7 +61,7 @@ let
 {
   format = "1.0.0";
   attribute = "rocq-elpi";
-  default-bundle = "rocq-9.2";
+  default-bundle = "rocq-master";
   bundles = {
 
     "rocq-9.1".rocqPackages = common-bundles // {
@@ -94,11 +94,11 @@ let
     };
 
     "rocq-master".rocqPackages = common-bundles // {
-      rocq-core.override.version = "master";
-      coq.override.version = "master";
+      rocq-core.override.version = "mattam82:universes-clauses";
+      coq.override.version = "mattam82:universes-clauses";
       micromega-plugin.override.version = "master";
       micromega-plugin.job = false;
-      stdlib.override.version = "master";
+      stdlib.override.version = "mattam82:universes-clauses";
       bignums.override.version = "master";
       jasmin.job = false;
     };
