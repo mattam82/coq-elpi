@@ -276,6 +276,8 @@ val universe_level_variable : Univ.Level.t Conversion.t
 val univ : Univ.Universe.t Conversion.t
 val isuniv : RawOpaqueData.t -> bool
 val univout : RawOpaqueData.t -> Univ.Universe.t
+val isuinstance : RawOpaqueData.t -> bool
+val uinstanceout : RawOpaqueData.t -> UVars.Instance.t
 
 val is_sort : depth:int -> term -> bool
 val is_prod : depth:int -> term -> (term * term) option (* ty, bo @ depth+1 *)
@@ -345,6 +347,7 @@ val mk_def :
 val get_global_env : State.t -> Environ.env
 val get_sigma : State.t -> Evd.evar_map
 val update_sigma : State.t -> (Evd.evar_map -> Evd.evar_map) -> State.t
+val update_return_sigma : State.t -> (Evd.evar_map -> Evd.evar_map * 'a) -> State.t * 'a
 
 val solvegoals2query :
   Evd.evar_map -> Evar.t list -> Elpi.API.Ast.Loc.t -> main:'a list ->
@@ -371,11 +374,11 @@ val force_level_of_universe : state -> Univ.Universe.t -> state * Univ.Level.t *
 val purge_algebraic_univs_sort : state -> EConstr.ESorts.t -> state * Sorts.t
 val ideclc : constant
 val uideclc : constant
+val poly_cumul_udecl_variance_of_options : state -> options -> state * bool * bool * UState.universe_decl * UVars.Variance.t option list option
 val merge_universe_context : state -> UState.t -> state
 val restricted_sigma_of : Univ.Level.Set.t -> state -> Evd.evar_map
 val universes_of_term : state -> EConstr.t -> Univ.Level.Set.t
 
-val poly_cumul_udecl_variance_of_options : state -> options -> state * bool * bool * UState.universe_decl * Entries.variance_entry
 val universes_of_udecl : state -> UState.universe_decl -> Univ.Level.Set.t
 
 val mind_record : Declarations.mind_specif -> Declarations.record_info

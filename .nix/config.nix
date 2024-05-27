@@ -71,7 +71,7 @@ let
   format = "1.0.0";
   attribute = "rocq-elpi";
   coq-attribute = "coq-elpi";
-  default-bundle = "rocq-9.1";
+  default-bundle = "rocq-master";
   bundles = {
 
     "rocq-9.0" = { rocqPackages = rocq-common-bundles // {
@@ -100,13 +100,13 @@ let
     }; };
 
     "rocq-master" = { rocqPackages = rocq-common-bundles // {
-      rocq-core.override.version = "master";
+      rocq-core.override.version = "mattam82:universes-clauses";
       bignums.override.version = "master";
-      stdlib.override.version = "master";
+      stdlib.override.version = "mattam82:universes-clauses";
     }; coqPackages = coq-common-bundles // {
-      coq.override.version = "master";
+      coq.override.version = "mattam82:universes-clauses";
       bignums.override.version = "master";
-      stdlib.override.version = "master";
+      stdlib.override.version = "mattam82:universes-clauses";
       jasmin.job = false;
     }; };
 

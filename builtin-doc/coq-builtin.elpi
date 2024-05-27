@@ -844,6 +844,7 @@ external func coq.env.current-section-path -> list string.
 % - @using! (default: section variables actually used)
 % - @univpoly! (default unset)
 % - @udecl! (default unset)
+% - @udecl-cumul! (default unset)
 % - @dropunivs! (default: false, drops all universe constraints from the
 % store after the definition)
 % 
@@ -1091,11 +1092,9 @@ external func coq.univ.variable.of-term term -> coq.univ.variable.set.
 
 % -- Universe instance (for universe polymorphic global terms) ------
 
-% As of today a universe polymorphic constant can only be instantiated
-% with universe level variables. That is f@{Prop} is not valid, nor
-% is f@{u+1}. One can only write f@{u} for any u.
+% A universe polymorphic constant can be instantiated with universes.
 % 
-% A univ-instance is morally a list of universe level variables,
+% A univ-instance is morally a list of universes,
 % but its list syntax is hidden in the terms. If you really need to
 % craft or inspect one of these, the following APIs can help you.
 % 
@@ -1133,9 +1132,8 @@ external func coq.univ-instance.unify-leq gref, univ-instance,
 
 % Constraint between two universes level variables
 kind univ-constraint type.
-external symbol lt : univ.variable -> univ.variable -> univ-constraint = "2". 
-external symbol le : univ.variable -> univ.variable -> univ-constraint = "1". 
-external symbol eq : univ.variable -> univ.variable -> univ-constraint = "2". 
+external symbol le : univ -> univ -> univ-constraint = "1". 
+external symbol eq : univ -> univ -> univ-constraint = "2". 
 
 % Variance of a universe level variable
 kind univ-variance type.
@@ -1144,8 +1142,8 @@ external symbol covariant : univ.variable -> univ-variance = "1".
 external symbol invariant : univ.variable -> univ-variance = "1". 
 external symbol irrelevant : univ.variable -> univ-variance = "1". 
 
-% Constraints for a non-cumulative declaration. Boolean tt means loose
-% (e.g. the '+' in f@{u v + | u < v +})
+% Constraints for a polymorphic declaration. Boolean tt means loose (e.g.
+% the '+' in f@{u v + | u < v +})
 kind upoly-decl type.
 external symbol upoly-decl : list univ.variable -> bool ->
                              list univ-constraint -> bool -> upoly-decl = "1". 
