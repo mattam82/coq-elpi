@@ -302,7 +302,7 @@ let handle_uinst_option_for_inductive ~depth options i state =
   match options.uinstance with
   | NoInstance ->
       let term, ctx = UnivGen.fresh_global_instance (get_global_env state) (GlobRef.IndRef i) in
-      let state = update_sigma state (fun sigma -> Evd.merge_sort_context_set UState.univ_flexible_alg sigma ctx) in
+      let state = update_sigma state (fun sigma -> Evd.merge_sort_context_set UState.univ_flexible sigma ctx) in
       snd @@ Constr.destInd term, state, []
   | ConcreteInstance i -> i, state, []
   | VarInstance (v_head, v_args, v_depth) ->
@@ -311,7 +311,7 @@ let handle_uinst_option_for_inductive ~depth options i state =
         UnivGen.fresh_global_instance (get_global_env state) (GlobRef.IndRef i) in
       let uinst = snd @@ Constr.destInd term in
       let state, lp_uinst, extra_goals = uinstance.Conv.embed ~depth state uinst in
-      let state = update_sigma state (fun sigma -> Evd.merge_sort_context_set UState.univ_flexible_alg sigma ctx) in
+      let state = update_sigma state (fun sigma -> Evd.merge_sort_context_set UState.univ_flexible sigma ctx) in
       uinst, state, API.Conversion.Unify (v', lp_uinst) :: extra_goals
 
 (* FIXME PARTIAL API
@@ -1597,7 +1597,7 @@ Supported attributes:
             UnivGen.fresh_global_instance (get_global_env state) (GlobRef.ConstructRef kon) in
           snd @@ Constr.destConstruct term,
           update_sigma state
-            (fun sigma -> Evd.merge_sort_context_set UState.univ_flexible_alg sigma ctx),
+            (fun sigma -> Evd.merge_sort_context_set UState.univ_flexible sigma ctx),
           []
         else
           UVars.Instance.empty, state, []
@@ -1610,7 +1610,7 @@ Supported attributes:
         let state, lp_uinst, extra_goals = uinstance.Conv.embed ~depth state uinst in
         uinst,
         update_sigma state
-          (fun sigma -> Evd.merge_sort_context_set UState.univ_flexible_alg sigma ctx),
+          (fun sigma -> Evd.merge_sort_context_set UState.univ_flexible sigma ctx),
         API.Conversion.Unify (v', lp_uinst) :: extra_goals
     in
     let ty = if_keep ty (fun () ->
@@ -2414,7 +2414,8 @@ phase unnecessary.|};
       let sigma = get_sigma state in
       let ustate = Evd.evar_universe_context sigma in
       let constraints = UState.constraints ustate in
-      let v_constraints = Univ.Constraints.filter (fun (l1,_,l2) -> Univ.Level.(equal v l1 || equal v l2)) constraints in
+      let v = Univ.Universe.make v in
+      let v_constraints = Univ.Constraints.filter (fun (l1,_,l2) -> Univ.Universe.(equal v l1 || equal v l2)) constraints in
       state, !: (Univ.Constraints.elements v_constraints), []
     )),
   DocAbove);
@@ -2431,11 +2432,9 @@ phase unnecessary.|};
  
   LPDoc "-- Universe instance (for universe polymorphic global terms) ------";
 
-  LPDoc {|As of today a universe polymorphic constant can only be instantiated
-with universe level variables. That is f@{Prop} is not valid, nor
-is f@{u+1}. One can only write f@{u} for any u.
+  LPDoc {|A universe polymorphic constant can be instantiated with universes.
 
-A univ-instance is morally a list of universe level variables,
+A univ-instance is morally a list of universes,
 but its list syntax is hidden in the terms. If you really need to
 craft or inspect one of these, the following APIs can help you.
 
@@ -2452,20 +2451,22 @@ term (of the instance it contains) with another one.|};
   (fun uinst_arg univs_arg ~depth { env ; options } _ state ->
     match uinst_arg, univs_arg with
     | Data uinst, _ ->
-      let elpi_term_of_level state l =
-        let state, t, gls = universe_level_variable.Conv.embed ~depth state l in
+      let elpi_term_of_univ state u =
+        let state, t, gls = univ.Conv.embed ~depth state u in
         assert (gls = []);
         state, mkData t
       in
       let quals, univs = UVars.Instance.to_array uinst in
       let () = if not (CArray.is_empty quals) then nYI "sort poly" in
       let state, univs =
-        CArray.fold_left_map elpi_term_of_level state univs in
+        CArray.fold_left_map elpi_term_of_univ state univs in
       state, ?: None +! Array.to_list univs, []
     | NoData, Data univs ->
       let readback_or_new state = function
-        | NoData -> let state, (l,_) = new_univ_level_variable state in state, l, []
-        | Data t -> universe_level_variable.Conv.readback ~depth state t in
+        | NoData -> let state, (_,u) = new_univ_level_variable state in state, u, []
+        | Data t -> let state, l, gls = universe_level_variable.Conv.readback ~depth state t in
+        state, Univ.Universe.make l, gls
+      in
       let state, levels, gls = U.map_acc readback_or_new state univs in
       state, !: (UVars.Instance.of_array ([||], Array.of_list levels)) +? None, gls
     | NoData, NoData ->

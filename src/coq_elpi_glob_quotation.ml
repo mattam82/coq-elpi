@@ -122,19 +122,25 @@ let sort_name env sigma l = match l with
   nYI "(glob)HOAS for Type@{i j}"
 
 let glob_level loc state = function
-  | UAnonymous _ -> nYI "UAnonymous"
-  | UNamed s ->
-      match s with
-      | GSProp 
-      | GProp ->
-        CErrors.user_err ?loc
-          Pp.(str "Universe instances cannot contain non-Set small levels, polymorphic" ++
-              str " universe instances must be greater or equal to Set.");
-      | GSet -> Univ.Level.set
-      | GUniv u -> u
-      | GRawUniv u -> nYI "GRawUniv"
-      | GLocalUniv l -> universe_level_name (get_sigma state) l
+    | GSProp 
+    | GProp ->
+      CErrors.user_err ?loc
+        Pp.(str "Universe instances cannot contain non-Set small levels, polymorphic" ++
+            str " universe instances must be greater or equal to Set.");
+    | GSet -> Univ.Level.set
+    | GUniv u -> u
+    | GRawUniv u -> nYI "GRawUniv"
+    | GLocalUniv l -> universe_level_name (get_sigma state) l
 
+let glob_level_expr loc state (l, k) =
+  (glob_level loc state l, k)
+
+let glob_univ loc state = function
+  | UAnonymous _ -> nYI "UAnonymous"
+  | UNamed l ->
+    let us = List.map (glob_level_expr loc state) l in
+    Univ.Universe.of_list us
+  
 let nogls f ~depth state x = let state, x = f ~depth state x in state, x, ()
 let noglsk f ~depth state = let state, x = f ~depth state in state, x, ()
 
@@ -155,7 +161,7 @@ let rec gterm2lp ~depth state x =
       state, in_elpi_poly_gr ~depth state gr s
     | Some (ql,l) ->
       let () = if not (CList.is_empty ql) then nYI "sort poly" in
-      let l' = List.map (glob_level x.CAst.loc state) l in
+      let l' = List.map (glob_univ x.CAst.loc state) l in
       state, in_elpi_poly_gr_instance ~depth state gr (UVars.Instance.of_array ([||], Array.of_list l'))
     end
   | GRef(gr,_ul) -> state, in_elpi_gr ~depth state gr
@@ -173,7 +179,7 @@ let rec gterm2lp ~depth state x =
   | GSort(None, UNamed u) ->
       let env = get_glob_env state in
       in_elpi_sort ~depth state (sort_name env (get_sigma state) u)
-  | GSort(None, UAnonymous {rigid=UnivFlexible _}) -> nYI "(glob)HOAS for Type@{_}"
+  | GSort(None, UAnonymous {rigid=UnivFlexible}) -> nYI "(glob)HOAS for Type@{_}"
   | GSort(Some _, _) -> nYI "(glob)HOAS for Type@{q | u}"
 
   | GProd(name,_,_,s,t) ->

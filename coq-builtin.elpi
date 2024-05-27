@@ -1049,9 +1049,9 @@ external pred coq.univ-instance.unify-leq i:gref, i:univ-instance,
 
 % Constraint between two universes level variables
 kind univ-constraint type.
-type lt univ.variable -> univ.variable -> univ-constraint.
-type le univ.variable -> univ.variable -> univ-constraint.
-type eq univ.variable -> univ.variable -> univ-constraint.
+type lt univ -> univ -> univ-constraint.
+type le univ -> univ -> univ-constraint.
+type eq univ -> univ -> univ-constraint.
 
 % Variance of a universe level variable
 kind univ-variance type.
