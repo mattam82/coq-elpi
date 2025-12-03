@@ -352,7 +352,7 @@ let is_mutual_inductive_entry_ground { Entries.mind_entry_params; mind_entry_ind
   List.for_all (is_ground_rel_ctx_entry sigma) mind_entry_params &&
   List.for_all (is_ground_one_inductive_entry sigma) mind_entry_inds
 
-[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
+[%%if coq = "9.0" || coq = "9.1"]
 let evd_merge_sort_context_set rigid = Evd.merge_sort_context_set rigid
 let global_push_context_set x = Global.push_context_set x
 let check_sort_poly_decl =  UState.check_univ_decl

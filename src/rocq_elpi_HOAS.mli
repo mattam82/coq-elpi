@@ -24,7 +24,7 @@ type uinstanceoption =
   | VarInstance of (FlexibleData.Elpi.t * RawData.term list * inv_rel_key)
     (* a variable was provided, the command will compute the instance to unify with it *)
 
-[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
+[%%if coq = "9.0" || coq = "9.1"]
 type univ_cst = Univ.univ_constraint
 type univ_csts = Univ.Constraints.t
 type univ_ctx_set = Univ.ContextSet.t
@@ -122,7 +122,7 @@ val lp2skeleton :
 type coercion_status = Regular | Off | Reversible
 type record_field_spec = { name : Name.t; is_coercion : coercion_status; is_canonical : bool }
 
-[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
+[%%if coq = "9.0" || coq = "9.1"]
 val lp2inductive_entry :
   depth:int -> empty coq_context -> constraints -> State.t -> term ->
   State.t * (DeclareInd.default_dep_elim list * Entries.mutual_inductive_entry * Univ.ContextSet.t * UnivNames.universe_binders * (bool * record_field_spec list) option * DeclareInd.one_inductive_impls list) * Conversion.extra_goals
@@ -233,7 +233,7 @@ val in_elpiast_primitive : loc:Ast.Loc.t -> primitive_value -> Ast.Term.t
 
 val uinstance : UVars.Instance.t Conversion.t
 
-[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
+[%%if coq = "9.0" || coq = "9.1"]
 val universe_constraint : Univ.univ_constraint Conversion.t
 [%%else]
 val universe_constraint : Univ.UnivConstraint.t Conversion.t
@@ -325,7 +325,7 @@ val body_of_constant :
 val grab_global_env_drop_univs_and_sigma : State.t -> State.t
 val grab_global_env_drop_sigma : State.t -> State.t
 
-[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
+[%%if coq = "9.0" || coq = "9.1"]
 val grab_global_env : uctx:Univ.ContextSet.t -> State.t -> State.t
 val grab_global_env_drop_sigma_keep_univs : uctx:Univ.ContextSet.t -> State.t -> State.t
 [%%else]
@@ -372,7 +372,7 @@ val merge_universe_context : state -> UState.t -> state
 val restricted_sigma_of : Univ.Level.Set.t -> state -> Evd.evar_map
 val universes_of_term : state -> EConstr.t -> Univ.Level.Set.t
 
-[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
+[%%if coq = "9.0" || coq = "9.1"]
 val poly_cumul_udecl_variance_of_options : state -> options -> state * bool * bool * UState.universe_decl * Entries.variance_entry
 val universes_of_udecl : state -> UState.universe_decl -> Univ.Level.Set.t
 [%%else]

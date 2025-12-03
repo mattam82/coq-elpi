@@ -30,7 +30,7 @@ type raw_red_expr = Genredexpr.raw_red_expr
 type raw_red_expr = Redexpr.raw_red_expr
 [%%endif]
 
-[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
+[%%if coq = "9.0" || coq = "9.1"]
 type raw_constant_decl = {
   name : qualified_name;
   atts : Attributes.vernac_flags;

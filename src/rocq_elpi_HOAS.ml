@@ -108,7 +108,7 @@ let constraint_eq u1 u2 =
   let open UnivProblem in
   ULe (u1, u2)
 
-[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
+[%%if coq = "9.0" || coq = "9.1"]
 let add_constraints state c = S.update (Option.get !pre_engine) state (fun ({ sigma } as x) ->
   { x with sigma = Evd.add_universe_constraints sigma c })
 [%%else]
@@ -208,7 +208,7 @@ let universe_level_variable =
   end
 }
 
-[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
+[%%if coq = "9.0" || coq = "9.1"]
 type univ_cst = Univ.univ_constraint
 type univ_csts = Univ.Constraints.t
 type univ_ctx_set = Univ.ContextSet.t
@@ -242,7 +242,7 @@ let univ_eq = Univ.UnivConstraint.Eq
 let univ_csts_of_list = Univ.UnivConstraints.of_list
 let univ_csts_to_list = Univ.UnivConstraints.elements
 let evd_merge_ctx_set rigid = Evd.merge_sort_context_set rigid QGraph.Internal
-let subst_univs_constraints x = UVars.subst_univ_constraints (Sorts.QVar.Map.empty,x)
+let subst_univs_constraints x = UVars.subst_univs_constraints (Sorts.QVar.Map.empty,x)
 let univs_of_csts x = PConstraints.univs @@ UVars.UContext.constraints x
 let mk_universe_decl sort_poly_decl_extensible_instance sort_poly_decl_extensible_constraints sort_poly_decl_univ_constraints sort_poly_decl_instance =
   let open UState in
