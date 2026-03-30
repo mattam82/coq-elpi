@@ -568,7 +568,7 @@ let sort : (Sorts.t, _ conv_context, API.Data.constraints) API.ContextualConvers
   );
   pp = ppsort;
   embed = (fun ~depth { options } _ state s ->
-    let state, s = collapse_to_type_state state s in
+    let state, s = collapse_to_type_state state s in (* FIXME? Not handling sort poly here *)
     match s with
     | Sorts.Prop -> state, E.mkConst propc, []
     | Sorts.SProp -> state, E.mkConst spropc, []
@@ -1300,7 +1300,7 @@ let sort = { sort with API.ContextualConversion.embed = (fun ~depth ctx csts sta
     if ctx.options.algunivs = None || ctx.options.algunivs = Some false then
       purge_algebraic_univs_sort state (EConstr.ESorts.make s)
     else
-      collapse_to_type_state state s
+      state, s
   in
   sort.API.ContextualConversion.embed ~depth ctx csts state s) }
 
