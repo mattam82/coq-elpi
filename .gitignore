@@ -63,3 +63,4 @@ apps/coercion/src/dune
 apps/cs/src/dune
 apps/tc/src/dune
 src/dune
+.vscode/tasks.json

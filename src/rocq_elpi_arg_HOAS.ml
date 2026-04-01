@@ -75,7 +75,11 @@ type raw_indt_decl = Vernacentries.Preprocessed_Mind_decl.inductive
 type glob_indt_decl = Genintern.glob_sign * raw_indt_decl
 type top_indt_decl = interp_sign * glob_indt_decl
 
+[%%if coq = "9.0" || coq = "9.1"]
 type univpoly = Mono | Poly | CumulPoly
+[%%else]
+type univpoly = PolyFlags.t
+[%%endif]
 
 [%%if coq = "9.0"]
 type raw_record_decl_elpi = {
@@ -174,6 +178,7 @@ let interp_univ_decl_opt = Constrintern.interp_univ_decl_opt
 [%%endif]
 type glob_constant_decl_elpi = {
   name : string list * Names.Id.t;
+  univpoly : univpoly;
   udecl : universe_decl_option;
   params : Glob_term.glob_decl list;
   typ : Glob_term.glob_constr;
@@ -251,18 +256,16 @@ let sep_last_qualid = function
   | [] -> "_", []
   | l -> CList.sep_last l
 
+[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
 let univpoly_of ~poly ~cumulative =
   match poly, cumulative with
   | true, true -> CumulPoly
   | true, false -> Poly
   | false, _ -> Mono
-
-[%%if coq = "9.0" || coq = "9.1"]
 let univpoly_of_flags flags =
   univpoly_of ~poly:flags.ComInductive.poly ~cumulative:flags.ComInductive.cumulative
 [%%else]
-let univpoly_of_flags flags =
-  univpoly_of ~poly:(PolyFlags.univ_poly flags.ComInductive.poly) ~cumulative:(PolyFlags.cumulative flags.poly)
+let univpoly_of_flags flags = flags.ComInductive.poly
 [%%endif]
 
 let of_coq_inductive_definition id =
@@ -494,35 +497,63 @@ let interp_red_expr = Redexpr.interp_redexp_no_ltac
 [%%if coq = "9.0" || coq = "9.1"]
 let interp_definition ~program_mode poly = ComDefinition.interp_definition ~program_mode
 let interp_assumption ~program_mode poly = ComAssumption.interp_assumption ~program_mode
-[%%else]
+[%%elseif coq = "9.2"]
 let interp_definition ~program_mode poly =
   ComDefinition.interp_definition ~program_mode ~poly:(PolyFlags.of_univ_poly poly)
 let interp_assumption ~program_mode poly =
   ComAssumption.interp_assumption ~program_mode ~poly:(PolyFlags.of_univ_poly poly)
+[%%else]
+let interp_definition ~program_mode poly =
+  ComDefinition.interp_definition ~program_mode ~poly
+let interp_assumption ~program_mode poly =
+  ComAssumption.interp_assumption ~program_mode ~poly
+[%%endif]
+
+[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
+let parse_poly _isdef atts = 
+  let open Attributes in
+  parse polymorphism atts
+
+let interp_udecl state poly udecl =
+  match udecl, poly with
+  | None, false -> state, NotUniversePolymorphic
+  | Some _, false -> nYI "only universe polymorphic definitions can take universe binders"
+  | None, true -> state, NonCumulative (([],true),(empty_univ_csts,true)) 
+  | Some udecl, true ->
+      let sigma, udecl = interp_univ_decl_opt (Rocq_elpi_HOAS.get_global_env state) (Some udecl) in
+      let ustate = Evd.ustate sigma in
+      let state = merge_universe_context state ustate in
+      let univ_decl_extensible_instance, univ_decl_extensible_constraints, univ_decl_univ_constraints,
+        univ_decl_instance, univ_decl_variances = dest_udecl udecl in
+      match univ_decl_variances with
+      | None ->
+          state, NonCumulative ((univ_decl_instance,univ_decl_extensible_instance),(univ_decl_univ_constraints,univ_decl_extensible_constraints))
+      | Some v ->
+          state, Cumulative ((List.combine univ_decl_instance v,univ_decl_extensible_instance),(univ_decl_univ_constraints,univ_decl_extensible_constraints))
+[%%else]
+let parse_poly_kind k atts = 
+  let open Attributes in
+  parse (poly k) atts
+let parse_poly isdef = parse_poly_kind (if isdef then PolyFlags.Definition else PolyFlags.Assumption)
+
+let interp_udecl state poly udecl =
+  match udecl, PolyFlags.univ_poly poly with
+  | None, false -> state, None
+  | Some _, false -> nYI "only universe polymorphic definitions can take universe binders"
+  | None, true -> state, Some UState.default_univ_decl
+  | Some udecl, true ->
+      let sigma, udecl = interp_univ_decl_opt (Rocq_elpi_HOAS.get_global_env state) (Some udecl) in
+      let ustate = Evd.ustate sigma in
+      let state = merge_universe_context state ustate in
+      state, Some udecl
 [%%endif]
 
 let raw_constant_decl_to_constr ~depth coq_ctx state { name; typ = (bl,typ); body; red; udecl; atts } =
   let env = coq_ctx.env in
   let poly =
     let open Attributes in
-    parse polymorphic atts in
-  let state, udecl =
-    match udecl, poly with
-    | None, false -> state, NotUniversePolymorphic
-    | Some _, false -> nYI "only universe polymorphic definitions can take universe binders"
-    | None, true -> state, NonCumulative (([],true),(empty_univ_csts,true))
-    | Some udecl, true ->
-        let sigma, udecl = interp_univ_decl_opt (Rocq_elpi_HOAS.get_global_env state) (Some udecl) in
-        let univ_decl_extensible_instance, univ_decl_extensible_constraints, univ_decl_univ_constraints,
-            univ_decl_instance, univ_decl_variances = dest_udecl udecl in
-        let ustate = Evd.ustate sigma in
-        let state = merge_universe_context state ustate in
-        match univ_decl_variances with
-        | None ->
-           state, NonCumulative ((univ_decl_instance,univ_decl_extensible_instance),(univ_decl_univ_constraints,univ_decl_extensible_constraints))
-        | Some v ->
-           state, Cumulative ((List.combine univ_decl_instance v,univ_decl_extensible_instance),(univ_decl_univ_constraints,univ_decl_extensible_constraints))
-  in
+    parse_poly (not @@ Option.is_empty body) atts in
+  let state, udecl = interp_udecl state poly udecl in    
   let sigma = get_sigma state in
   match body, typ with
   | Some body, _ ->
@@ -533,14 +564,14 @@ let raw_constant_decl_to_constr ~depth coq_ctx state { name; typ = (bl,typ); bod
       in
       let state, gls0 = set_current_sigma ~depth state sigma in
       let typ = option_default (fun () -> Retyping.get_type_of env sigma body) typ in
-      state, udecl, typ, Some body, gls0 
+      state, poly, udecl, typ, Some body, gls0 
   | None, Some typ ->
       assert(red = None);
       let sigma, typ, impargs =
         interp_assumption ~program_mode:false poly
           env sigma Constrintern.empty_internalization_env bl typ in
       let state, gls0 = set_current_sigma ~depth state sigma in
-      state, udecl, typ, None, gls0
+      state, poly, udecl, typ, None, gls0
   | _ -> assert false
 
 
@@ -549,13 +580,9 @@ let raw_constant_decl_to_glob_synterp ({ name; atts; udecl; typ = (params,typ); 
   let params = List.rev params in
   let typ = mkGHole in
   let body = Option.map (fun _ -> mkGHole) body in
-  let poly =
-    let open Attributes in
-    parse polymorphic atts in
-  let udecl =
-    if poly then NonCumulative (([],true),(empty_univ_csts,true))
-    else NotUniversePolymorphic in
-  state, { name = raw_decl_name_to_glob name; params; typ; udecl; body }
+  let poly = parse_poly (not @@ Option.is_empty body) atts in
+  let state, udecl = interp_udecl state poly udecl in
+  state, { name = raw_decl_name_to_glob name; params; typ; univpoly = poly; udecl; body }
   
 let raw_constant_decl_to_glob glob_sign ({ name; atts; udecl; typ = (params,typ); body } : raw_constant_decl) state =
   let intern_env, params = intern_global_context glob_sign ~intern_env:Constrintern.empty_internalization_env params in
@@ -564,22 +591,9 @@ let raw_constant_decl_to_glob glob_sign ({ name; atts; udecl; typ = (params,typ)
   let typ = Option.default expr_hole typ in
   let typ = intern_global_constr_ty ~intern_env glob_sign_params typ in
   let body = Option.map (intern_global_constr ~intern_env glob_sign_params) body in
-  let poly =
-    let open Attributes in
-    parse polymorphic atts in
-  let state, udecl =
-    match udecl, poly with
-    | None, false -> state, NotUniversePolymorphic
-    | Some _, false -> nYI "only universe polymorphic definitions can take universe binders"
-    | None, true -> state, NonCumulative (([],true),(empty_univ_csts,true))
-    | Some udecl, true ->
-        let sigma, udecl = interp_univ_decl_opt (Rocq_elpi_HOAS.get_global_env state) (Some udecl) in
-        let univ_decl_extensible_instance, univ_decl_extensible_constraints, univ_decl_univ_constraints,
-            univ_decl_instance, univ_decl_variances = dest_udecl udecl in
-        let ustate = Evd.ustate sigma in
-        let state = merge_universe_context state ustate in
-        state, NonCumulative ((univ_decl_instance,univ_decl_extensible_instance),(univ_decl_univ_constraints,univ_decl_extensible_constraints)) in
-  state, { name = raw_decl_name_to_glob name; params; typ; udecl; body }
+  let poly = parse_poly (not @@ Option.is_empty body) atts in
+  let state, udecl = interp_udecl state poly udecl in  
+  state, { name = raw_decl_name_to_glob name; params; typ; univpoly = poly; udecl; body }
 let intern_constant_decl glob_sign (it : raw_constant_decl) = glob_sign, it
 
 let glob glob_sign : raw -> glob = function
@@ -749,18 +763,19 @@ let wit = add_genarg "elpi_ftactic_arg"
 
 end
 
+let interp_univ_decl state univdecl =
+  match univdecl with 
+  | None -> state, UState.default_univ_decl
+  | Some univdecl ->
+    let env = get_global_env state in
+    update_return_sigma state
+      (fun sigma -> 
+        let sigma', udecl = Constrintern.interp_univ_decl_opt env (Some univdecl) in
+        let ustate = Evd.ustate sigma' in
+        merge_ustate sigma ustate, udecl)
+
+[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
 let mk_indt_decl state univpoly ?univdecl r =
-  let state, udecl = 
-    match univdecl with 
-    | None -> state, UState.default_univ_decl
-    | Some univdecl ->
-      let env = get_global_env state in
-      update_return_sigma state
-        (fun sigma -> 
-          let sigma', udecl = Constrintern.interp_univ_decl_opt env (Some univdecl) in
-          let ustate = Evd.ustate sigma' in
-          Evd.merge_universe_context sigma ustate, udecl)
-  in
   match univpoly with
   | Cmd.Mono -> state, E.mkApp ideclc r []
   | Cmd.Poly -> 
@@ -771,6 +786,15 @@ let mk_indt_decl state univpoly ?univdecl r =
       let state, up, gls = universe_decl.API.Conversion.embed ~depth:0 state (Cumul(([],true),(Cmd.empty_univ_csts,true))) in
       assert(gls=[]);
       state, E.mkApp uideclc r [up]
+[%%else]
+let mk_indt_decl state poly ?(univdecl = UState.default_univ_decl) r =
+  if not (PolyFlags.univ_poly poly) then
+    state, E.mkApp ideclc r []
+  else 
+    let state, up, gls = universe_decl.API.Conversion.embed ~depth:0 state univdecl in
+    assert(gls=[]);
+    state, E.mkApp uideclc r [up]
+[%%endif]
 
 let rec garityparams2lp_synterp ~depth params k state =
   match params with
@@ -814,11 +838,12 @@ let grecord2lp_synterp ~depth state { Cmd.name; arity; params; constructorname; 
   let params = List.map drop_relevance params in
   let state, r = gindparams2lp_synterp ~depth params (grecord2lp_synterp ~depth ~name ~constructorname arity fields) state in
   mk_indt_decl state univpoly r
-      
+
 let grecord2lp ~loc ~base ~depth state { Cmd.name; arity; params; constructorname; fields; univpoly; univdecl } =
   let open Rocq_elpi_glob_quotation in
+  let state, univdecl = interp_univ_decl state univdecl in
   let state, r = gindparams2lp ~loc ~base params ~k:(grecord2lp ~loc ~base ~name ~constructorname arity fields) ~depth state in
-  mk_indt_decl state univpoly ?univdecl r
+  mk_indt_decl state univpoly ~univdecl r
 
 let contract_params env sigma name params nuparams_given t =
   if nuparams_given then t else
@@ -875,7 +900,7 @@ let ginductive2lp_synterp ~depth state { Cmd.finiteness; name; arity; params; nu
     state, in_elpi_indtdecl_inductive state finiteness (Name.Name qindt_name) arity constructors
   in
   let state, r = gindparams2lp_synterp params (do_inductive_synterp ~depth) ~depth state in
-  mk_indt_decl state univpoly ?univdecl r
+  mk_indt_decl state univpoly r
 
 let ginductive2lp ~loc ~depth ~base state { Cmd.finiteness; name; arity; params; nuparams; nuparams_given; constructors; univpoly; univdecl } =
   let open Rocq_elpi_glob_quotation in
@@ -897,8 +922,9 @@ let ginductive2lp ~loc ~depth ~base state { Cmd.finiteness; name; arity; params;
       state, in_elpi_indtdecl_inductive state finiteness (Name.Name qindt_name) arity constructors, ())
     ~depth state
   in
+  let state, univdecl = interp_univ_decl state univdecl in
   let state, r = gindparams2lp ~loc ~base params ~k:(drop_unit do_inductive) ~depth state in
-  mk_indt_decl state univpoly ?univdecl r
+  mk_indt_decl state univpoly ~univdecl r
 
 let in_option = Elpi.(Builtin.option API.BuiltInData.any).API.Conversion.embed
 
@@ -911,31 +937,30 @@ let decl_name2lp name =
 let cdeclc = E.Constants.declare_global_symbol "const-decl"
 let ucdeclc = E.Constants.declare_global_symbol "upoly-const-decl"
 
-let gdecl2lp_synterp ~depth state { Cmd.name; params; typ : _; body; udecl } =
+
+let gdecl2lp_synterp ~depth state { Cmd.name; params; typ : _; body; univpoly; udecl } =
   let params = List.map drop_relevance params in
   let state, typ = garityparams2lp_synterp ~depth params (fun state -> state, in_elpi_arity E.mkDiscard) state in
   let body = Option.map (fun _ -> E.mkDiscard) body in
   let name = decl_name2lp name in
   let state, body, gls = in_option ~depth state body in
-  match udecl with
-  | NotUniversePolymorphic -> state, E.mkApp cdeclc name [body;typ], gls
-  | Cumulative _ -> assert false
-  | NonCumulative ud ->
-      let state, ud, gls1 = universe_decl.API.Conversion.embed ~depth state (NonCumul ud) in
-      state, E.mkApp ucdeclc name [body;typ;ud], gls @ gls1
+  if not @@ univ_poly univpoly then
+    state, E.mkApp cdeclc name [body;typ], gls
+  else 
+    let state, ud, gls1 = universe_decl.API.Conversion.embed ~depth state (Option.default UState.default_univ_decl udecl) in
+    state, E.mkApp ucdeclc name [body;typ;ud], gls @ gls1
 
-let cdecl2lp ~loc ~depth ~base state { Cmd.name; params; typ; body; udecl } =
+let cdecl2lp ~loc ~depth ~base state { Cmd.name; params; typ; body; univpoly; udecl } =
   let open Rocq_elpi_glob_quotation in
   let state, typ = garityparams2lp ~loc ~base params ~k:(garity2lp ~loc ~base typ) ~depth state in
   let state, body = option_map_acc (fun state bo -> gterm2lp ~loc ~depth ~base (Rocq_elpi_utils.mk_gfun bo params) state) state body in
   let name = decl_name2lp name in
   let state, body, gls = in_option ~depth state body in
-  match udecl with
-  | NotUniversePolymorphic -> state, E.mkApp cdeclc name [body;typ], gls
-  | Cumulative _ -> assert false
-  | NonCumulative ud ->
-      let state, ud, gls1 = universe_decl.API.Conversion.embed ~depth state (NonCumul ud) in
-      state, E.mkApp ucdeclc name [body;typ;ud], gls @ gls1
+  if not @@ univ_poly univpoly then
+    state, E.mkApp cdeclc name [body;typ], gls
+  else
+    let state, ud, gls1 = universe_decl.API.Conversion.embed ~depth state (Option.default UState.default_univ_decl udecl) in
+    state, E.mkApp ucdeclc name [body;typ;ud], gls @ gls1
 
 let ctxitemc = E.Constants.declare_global_symbol "context-item"
 let ctxendc =  E.Constants.declare_global_symbol "context-end"
@@ -1241,7 +1266,7 @@ let in_elpi_cmd ~loc ~depth ~base ?calldepth coq_ctx state ~raw (x : Cmd.top) =
       let state = Rocq_elpi_glob_quotation.set_coq_ctx_hyps state (coq_ctx,hyps) in
       cdecl2lp ~loc ~depth ~base state glob_cdecl
   | ConstantDecl (_ist,(glob_sign,({ name; typ = (bl,_) } as raw_cdecl))) ->
-      let state, udecl, typ, body, gls0 =
+      let state, poly, udecl, typ, body, gls0 =
         raw_constant_decl_to_constr ~depth coq_ctx state raw_cdecl in
       let state, typ, gls1 = constr2lp_closed ~depth ?calldepth coq_ctx E.no_constraints state typ in
       let state, body, gls2 =
@@ -1249,13 +1274,11 @@ let in_elpi_cmd ~loc ~depth ~base ?calldepth coq_ctx state ~raw (x : Cmd.top) =
       let state, typ = best_effort_recover_arity ~depth state glob_sign typ bl in
       let state, body, _ = in_option ~depth state body in
       let c = decl_name2lp (raw_decl_name_to_glob name) in
-      begin match udecl with
-      | NotUniversePolymorphic -> state, E.mkApp cdeclc c [body;typ], gls0 @ gls1 @ gls2
-      | Cumulative _ -> assert false
-      | NonCumulative udecl ->
-          let state, ud, gls3 = universe_decl.API.Conversion.embed ~depth state (NonCumul udecl) in
-          state, E.mkApp ucdeclc c [body;typ;ud], gls0 @ gls1 @ gls2 @ gls3
-      end
+      if not @@ univ_poly poly then 
+        state, E.mkApp cdeclc c [body;typ], gls0 @ gls1 @ gls2
+      else 
+        let state, ud, gls3 = universe_decl.API.Conversion.embed ~depth state (Option.default UState.default_univ_decl udecl) in
+        state, E.mkApp ucdeclc c [body;typ;ud], gls0 @ gls1 @ gls2 @ gls3
   | Context (_ist,(glob_sign,raw_ctx)) when raw ->
       let glob_ctx = raw_context_decl_to_glob glob_sign raw_ctx in
       let state = Rocq_elpi_glob_quotation.set_coq_ctx_hyps state (coq_ctx,hyps) in

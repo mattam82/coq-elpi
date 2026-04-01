@@ -1119,9 +1119,11 @@ let get_entry_context e =
 
 [%%if coq = "9.0" || coq = "9.1"]
 let make_polyflags poly cumul = poly
-[%%else]
+[%%elseif coq = "9.2"]
 let make_polyflags poly cumul =
   PolyFlags.make ~univ_poly:poly ~cumulative:cumul ~collapse_sort_variables:true
+[%%else]
+let make_polyflags poly cumul = poly
 [%%endif]
 
 let declare_definition using ~cinfo ~info ~opaque ~body sigma =
@@ -1138,11 +1140,10 @@ let add_axiom_or_variable api id ty local_bkind options state =
     err Pp.(str"coq.env.add-const: the type must be ground. Did you forge to call coq.typecheck-indt-decl?");
   let ty = EConstr.to_constr (get_sigma state) ty in
   let sigma = restricted_sigma_of used state in
-  if cumul then
-    err Pp.(str api ++ str": unsupported attribute @udecl-cumul! or @univpoly-cumul!");
-  if poly && Option.has_some local_bkind then
-    err Pp.(str api ++ str": section variables cannot be universe polymorphic");
-  let univs = check_univ_decl_ass (Evd.ustate sigma) udecl ~poly:(make_polyflags poly cumul) in
+  (* if poly && Option.has_some local_bkind then
+    err Pp.(str api ++ str": section variables cannot be universe polymorphic"); *)
+    Feedback.msg_debug Pp.(str "add_axiom, poly = " ++ bool (univ_poly poly) ++ str" cumulative = " ++ bool cumul);
+  let univs = check_univ_decl_ass (Evd.ustate sigma) udecl ~poly:default_poly_flags in
   let kind = Decls.Logical in
   let impargs = [] in
   let loc = to_coq_loc @@ State.get Rocq_elpi_builtins_synterp.invocation_site_loc state in
@@ -2534,6 +2535,7 @@ Supported attributes:
               err Pp.(str"coq.env.add-const: the type must be ground. Did you forge to call coq.typecheck?");
              Some ty in
        let state, poly, cumul, udecl, _ = poly_cumul_udecl_variance_of_options state options in
+       (* Feedback.msg_debug Pp.(str"poly = " ++ bool poly); *)
        let kind = Decls.(IsDefinition Definition) in
        let scope = if Option.has_some local_bkind
         then Locality.Discharge

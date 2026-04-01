@@ -515,6 +515,8 @@ macro @udecl-cumul! Vs LV Cs LC :- get-option "coq:udecl-cumul" (upoly-decl-cumu
 macro @univpoly!       :- @udecl! [] tt [] tt.
 macro @univpoly-cumul! :- @udecl-cumul! [] tt [] tt.
 
+% macro @univdecl!  :- get-option "coq:univdecl" 
+
 macro @ppwidth! N :- get-option "coq:ppwidth" N. % printing width
 macro @ppall! :- get-option "coq:pp" "all". % printing all
 macro @ppmost! :- get-option "coq:pp" "most". % printing most of contents
@@ -1144,12 +1146,9 @@ external symbol irrelevant : univ.variable -> univ-variance = "1".
 
 % Constraints for a polymorphic declaration. Boolean tt means loose (e.g.
 % the '+' in f@{u v + | u < v +})
-kind upoly-decl type.
-external symbol upoly-decl : list univ.variable -> bool ->
-                             list univ-constraint -> bool -> upoly-decl = "1". 
-external symbol upoly-decl-cumul : list univ-variance -> bool ->
-                                   list univ-constraint -> bool ->
-                                   upoly-decl = "1". 
+kind univ-decl type.
+external symbol univ-decl : list univ-variance -> bool ->
+                            list univ-constraint -> bool -> univ-decl = "1". 
 
 % -- Primitive --------------------------------------------------------
 
