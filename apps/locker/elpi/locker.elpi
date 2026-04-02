@@ -67,7 +67,7 @@ module-lock ID Bo Arity UnivDecl :- std.do! [
 ].
 
 func lock-module-type id, term, term, option upoly-decl -> modtypath.
-lock-module-type ID Ty Bo UnivDecl M :- std.spy-do! [
+lock-module-type ID Ty Bo UnivDecl M :- std.do! [
   Module is ID ^ "_Locked",
   coq.env.begin-module-type Module,
   if (UnivDecl = some UD) (coq.upoly-decl->attribute UD Poly!) (Poly! = true),
@@ -81,7 +81,7 @@ lock-module-type ID Ty Bo UnivDecl M :- std.spy-do! [
 
 :functional
 pred lock-module-body o:modtypath, i:id, i:term, i:term, i:option upoly-decl, o:term, o:modpath.
-lock-module-body Signature ID Ty Bo UnivDecl B M :- std.spy-do! [
+lock-module-body Signature ID Ty Bo UnivDecl B M :- std.do! [
   coq.env.begin-module ID (some Signature),
   if (UnivDecl = some UD) (coq.upoly-decl->attribute UD Poly!) (Poly! = true),
   Poly! => coq.env.add-const "body" Bo Ty @transparent! C,
