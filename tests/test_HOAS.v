@@ -77,20 +77,17 @@ Elpi Accumulate Db univs.db.
 Elpi Query lp:{{
   coq.univ.new U,
   coq.elpi.accumulate current "univs.db" (clause _ _ (u U)),
-  coq.univ.variable U L,
-  coq.univ-instance I [L],
+  coq.univ-instance I [U],
   coq.elpi.accumulate current "univs.db" (clause _ _ (ut (pglobal {{:gref ut}} I) U))
 }}.
 
 Universe foo.
 Universe foo1.
-Elpi Print test_u "elpi.tests/test_u".
+(* Elpi Print test_u "elpi.tests/test_u". *)
 Elpi Query lp:{{
   {{ Type@{foo} }} = sort (typ U),
   u U, ut {{ ut@{foo} }} U
 }}.
-
-stop
 
 Axiom B : bool -> Type.
 Axiom N : nat -> Type.
@@ -333,7 +330,7 @@ Elpi Query lp:{{
   coq.say {coq.term->string {{ toto }}}.
 }}.
 
-Polymorphic Record F (T : Type) := Build_F { t : T }.
+#[universes(polymorphic,cumulative=no)] Record F (T : Type) := Build_F { t : T }.
 Polymorphic Definition fnat : F nat := {| t := 0%nat |}.
 
 Elpi Query lp:{{
@@ -546,25 +543,21 @@ Elpi Query lp:{{
   coq.locate "F" GRF,
   coq.typecheck (pglobal GRF I1) _ ok,
   coq.typecheck (pglobal GRF I2) _ ok,
-  coq.univ-instance I1 [L1],
-  coq.univ-instance I2 [L2],
-  coq.univ.variable U1 L1,
-  coq.univ.variable U2 L2,
+  coq.univ-instance I1 [U1],
+  coq.univ-instance I2 [U2],
   coq.sort.sup (typ U1) (typ U2),
   coq.univ-instance.unify-eq GRF I1 I2 (error E),
   coq.say E.
 }}.
 
-Cumulative Polymorphic Record F2@{+x} (T : Type@{x}) := Build_F2 { t2 : T }.
+Cumulative Polymorphic Record F2@{x} (T : Type@{x}) := Build_F2 { t2 : T }.
 
 Elpi Query lp:{{
   coq.locate "F2" GRF,
   coq.typecheck (pglobal GRF I1) _ ok,
   coq.typecheck (pglobal GRF I2) _ ok,
-  coq.univ-instance I1 [L1],
-  coq.univ-instance I2 [L2],
-  coq.univ.variable U1 L1,
-  coq.univ.variable U2 L2,
+  coq.univ-instance I1 [U1],
+  coq.univ-instance I2 [U2],
   coq.sort.sup (typ U1) (typ U2),
   coq.univ.print,
   coq.univ-instance.unify-leq GRF I1 I2 ok. % why does this add a = not a <= ?
@@ -574,10 +567,8 @@ Elpi Query lp:{{
   coq.locate "F" GRF,
   coq.env.global GRF (pglobal GRF I1),
   coq.typecheck (pglobal GRF I2) _ ok,
-  coq.univ-instance I1 [L1],
-  coq.univ-instance I2 [L2],
-  coq.univ.variable U1 L1,
-  coq.univ.variable U2 L2,
+  coq.univ-instance I1 [U1],
+  coq.univ-instance I2 [U2],
   coq.sort.sup (typ U1) (typ U2),
   coq.univ.print,
   coq.univ-instance.unify-leq GRF I2 I1 (error E),
@@ -635,13 +626,15 @@ Elpi Query lp:{{
   coq.univ.print,
   coq.say "------------------",
   coq.typecheck Body Type ok,
+  coq.say ok,
   coq.univ.print,
 
   coq.univ.variable UX LX,
   coq.univ.variable UY LY,
   coq.univ.print,
-
-  @udecl! [LX,LY] ff [lt LX LY] ff =>
+  coq.univ.alg-super UX SLX,
+  @udecl! [LX,LY] ff [le SLX UY] ff =>
+    @polymorphic! =>
     coq.env.add-const "poly" Body Type _ _.
 
 /*
@@ -655,9 +648,8 @@ Elpi Query lp:{{
 */
 }}.
 
-Set Printing Universes.
 About poly.
-Check poly@{Set Type}.
+Check poly@{Set}. Print poly.
 About Box.
 
 Elpi Query lp:{{ 
@@ -694,7 +686,7 @@ Goal c S. Abort.
 Elpi Query lp:{{
   coq.typecheck-ty (sort (typ X)) A ok,
   A = typ TX,
-  not(coq.univ.alg-super X TX),
+  coq.univ.alg-super X TX,
   coq.say X ":" TX,
   (@keep-alg-univs! => coq.typecheck-ty (sort (typ Y)) B ok),
   B = typ TY,

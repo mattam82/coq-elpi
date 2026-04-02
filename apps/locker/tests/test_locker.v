@@ -89,6 +89,7 @@ Set Printing Universes.
 
 lock #[universes(polymorphic)] Definition id1@{u} (T : Type@{u}) (x : T) := x.
 About id1.
+About id1_unlock_subterm.
 Elpi Query lp:{{ coq.locate "id1" GR, coq.env.univpoly? GR 1 }}.
 
 

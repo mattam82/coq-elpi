@@ -51,7 +51,7 @@ Elpi Export UM.expand.
 
 (* From now on UM.expand is a regular command taking as the only argument
    a record declaration. *)
-
+Set Debug "backtrace".
 UM.expand Record foo := mk_foo {
   f1 : Type;
   f2 : f1 -> Type;
