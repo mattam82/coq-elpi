@@ -510,6 +510,10 @@ macro @uinstance! I :- get-option "coq:uinstance" I. % universe instance
 % The second boolean is tt if this list can be extended by Coq or it has to
 % mention all universe constraints actually required to type check the
 % declaration)
+macro @monomorphic! :- get-option "coq:univ-poly" ff.
+macro @polymorphic! :- get-option "coq:univ-poly" tt.
+macro @cumulative :- get-option "coq:cumulative" tt.
+macro @collapse-sort-variables! :- get-option "coq:collaps-sort-variables" tt.
 macro @udecl! Vs LV Cs LC       :- get-option "coq:udecl" (upoly-decl Vs LV Cs LC).
 macro @udecl-cumul! Vs LV Cs LC :- get-option "coq:udecl-cumul" (upoly-decl-cumul Vs LV Cs LC).
 macro @univpoly!       :- @udecl! [] tt [] tt.
@@ -1109,8 +1113,8 @@ kind univ-instance type.
 
 
 % [coq.univ-instance UI UL] relates a univ-instance UI and a list of
-% universe level variables UL
-external func coq.univ-instance -> univ-instance, list univ.variable.
+% universes UL
+external func coq.univ-instance -> univ-instance, list univ.
 
 % [coq.univ-instance.unify-eq GR UI1 UI2 Diagnostic] unifies the two
 % universe instances for the same gref
@@ -1144,11 +1148,14 @@ external symbol covariant : univ.variable -> univ-variance = "1".
 external symbol invariant : univ.variable -> univ-variance = "1". 
 external symbol irrelevant : univ.variable -> univ-variance = "1". 
 
-% Constraints for a polymorphic declaration. Boolean tt means loose (e.g.
-% the '+' in f@{u v + | u < v +})
-kind univ-decl type.
-external symbol univ-decl : list univ-variance -> bool ->
-                            list univ-constraint -> bool -> univ-decl = "1". 
+% Universe and constraints declaration. Boolean tt means loose (e.g. the
+% '+' in f@{u v + | u < v +})
+kind upoly-decl type.
+external symbol upoly-decl : list univ.variable -> bool ->
+                             list univ-constraint -> bool -> upoly-decl = "1". 
+external symbol upoly-decl-cumul : list univ-variance -> bool ->
+                                   list univ-constraint -> bool ->
+                                   upoly-decl = "1". 
 
 % -- Primitive --------------------------------------------------------
 

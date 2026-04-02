@@ -175,13 +175,12 @@ Abort.
 
 #[arguments(raw)] Elpi Command detype.
 Elpi Accumulate lp:{{
-  main [upoly-const-decl _ _ (parameter _ _ (sort (typ U)) _ as A) (upoly-decl [UL] _ _ _)] :-
+  main [upoly-const-decl _ _ (parameter _ _ (sort (typ U)) _ as A) (upoly-decl-cumul [auto UL] _ _ _)] :-
     std.assert! (coq.univ.variable U UL) "wtf",
     (@keepunivs! => std.assert-ok! (coq.elaborate-arity-skeleton A _ (parameter _ _ (sort (typ V)) _)) "wtf"),
     std.assert! (U = V) "elaboration refreshes",
     coq.say U V.
 }}.
-
 
 Elpi detype #[universes(polymorphic)] Definition f@{u|Set < u} (x : Type@{u}) := x.
 

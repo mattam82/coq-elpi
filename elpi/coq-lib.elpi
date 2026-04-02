@@ -183,6 +183,9 @@ fold-map-arity (arity T) A (arity T1) A1 :- fold-map T A T1 A1.
 % The arguments are the same of coq.env.indt plus an an extra one being
 % the output (of type indt-decl).
 
+% func univ.lt univ, univ -> univ-constraint.
+% univ.lt U V (le {coq.univ.alg-super U} V).
+
 func coq.upoly-decl->attribute any -> prop.
 coq.upoly-decl->attribute (upoly-decl A B C D) (@udecl! A B C D).
 coq.upoly-decl->attribute (upoly-decl-cumul A B C D) (@udecl-cumul! A B C D).

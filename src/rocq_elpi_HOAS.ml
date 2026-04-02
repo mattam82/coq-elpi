@@ -455,11 +455,16 @@ let univdecl_to_tuple udecl =
 
 let universe_decl : UState.universe_decl API.Conversion.t =
   let open API.Conversion in let open API.BuiltInData in let open API.AlgebraicData in let open Elpi.Builtin in declare {
-  ty = TyName "univ-decl";
+  ty = TyName "upoly-decl";
   doc = "Universe and constraints declaration. Boolean tt means loose (e.g. the '+' in f@{u v + | u < v +})";
   pp = (fun fmt _ -> Format.fprintf fmt "<todo>");
   constructors = [
-    K("univ-decl","",A(list universe_variance,A(bool,A(list universe_constraint,A(bool,N)))),
+    K("upoly-decl","",A(list universe_level_variable,A(bool,A(list universe_constraint,A(bool,N)))),
+     B (fun x sx y sy -> univdecl_of_tuple (List.map (fun x -> x, None) x) sx y sy),
+     M (fun ~ok ~ko -> function udecl ->
+      let x, sx, y, sy = univdecl_to_tuple udecl in
+      ok (List.map fst x) sx y sy));
+    K("upoly-decl-cumul","",A(list universe_variance,A(bool,A(list universe_constraint,A(bool,N)))),
      B (fun x sx y sy -> univdecl_of_tuple x sx y sy),
      M (fun ~ok ~ko -> function udecl ->
       let x, sx, y, sy = univdecl_to_tuple udecl in
@@ -1502,17 +1507,17 @@ let get_universe_decl state map =
     | Cumul _ -> U.type_error "@udecl! containing a cumulative declaration"
     end
 [%%else]
-let get_bool_option_default state map name =
+let get_bool_option_default state map name default =
   try
     let t, depth = API.Data.StrMap.find name map in
     let _, b, _ = Elpi.Builtin.bool.API.Conversion.readback ~depth state t in
     b
-  with Not_found -> false
+  with Not_found -> default
 
 let get_poly_option state map =
-  let univ_poly = get_bool_option_default state map "coq:univ_poly" in
-  let cumulative = get_bool_option_default state map "coq:cumulative" in
-  let collapse_sort_variables = get_bool_option_default state map "coq:collapse_sort_variables" in
+  let univ_poly = get_bool_option_default state map "coq:univ-poly" false in
+  let cumulative = get_bool_option_default state map "coq:cumulative" false in
+  let collapse_sort_variables = get_bool_option_default state map "coq:collapse-sort-variables" true in
   PolyFlags.make ~univ_poly ~cumulative ~collapse_sort_variables
 
 let get_universe_decl state map =
@@ -3391,6 +3396,10 @@ let restricted_sigma_of s state =
 let universes_of_term state t =
   let sigma = get_sigma state in
   snd (EConstr.universes_of_constr sigma t)
+
+let nf_evar state t =
+  let sigma = get_sigma state in
+  Evarutil.nf_evar sigma t
 
 let universes_of_udecl state udecl =
   let used1, csts = dest_udecl udecl in

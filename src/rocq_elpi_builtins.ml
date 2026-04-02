@@ -2535,13 +2535,18 @@ Supported attributes:
               err Pp.(str"coq.env.add-const: the type must be ground. Did you forge to call coq.typecheck?");
              Some ty in
        let state, poly, cumul, udecl, _ = poly_cumul_udecl_variance_of_options state options in
-       (* Feedback.msg_debug Pp.(str"poly = " ++ bool poly); *)
+       Feedback.msg_debug Pp.(str"poly = " ++ PolyFlags.pr poly);
        let kind = Decls.(IsDefinition Definition) in
        let scope = if Option.has_some local_bkind
         then Locality.Discharge
         else Locality.(Global ImportDefaultBehavior) in
-       let cinfo = cinfo_make state types options.using ~name:(Id.of_string id) ~typ:types ~impargs:[] () in
 
+       let body = nf_evar state body 
+       and types = Option.map (nf_evar state) types in
+       (** Normalize the type before building the cinfo so that it commutes with
+           universe restriction: restrict will drop assignments of unused universes
+           in the normalized term. *)
+       let cinfo = cinfo_make state types options.using ~name:(Id.of_string id) ~typ:types ~impargs:[] () in
        let info = Declare.Info.make ~scope ~kind ~poly:(make_polyflags poly cumul) ~udecl () in
 
        let used =
@@ -2550,7 +2555,10 @@ Supported attributes:
            (Option.default (EConstr.mkRel 1) types |> universes_of_term state) in
        let used = Univ.Level.Set.union used (universes_of_udecl state udecl) in
        let sigma = restricted_sigma_of used state in
-
+       Feedback.msg_debug Pp.(str "declare_definition, poly = " ++ PolyFlags.pr poly ++ str" body = " ++ Printer.pr_econstr_env (Global.env ()) sigma body ++ 
+       pr_opt (Printer.pr_econstr_env (Global.env ()) sigma) types ++  
+       Univ.Level.Set.pr Univ.Level.raw_pr used ++
+       UState.pr (Evd.ustate sigma));
        let gr, uctx =
          try declare_definition options.using ~cinfo ~info ~opaque ~body sigma
        with Loop_checking.Undeclared l as e ->
@@ -3111,8 +3119,8 @@ term (of the instance it contains) with another one.|};
 
   MLCode(Pred("coq.univ-instance",
     InOut(B.ioarg uinstance, "UI",
-    InOut(B.ioarg (list B.(ioarg_poly "univ.variable")), "UL",
-    Full(global, "relates a univ-instance UI and a list of universe level variables UL"))),
+    InOut(B.ioarg (list B.(ioarg_poly "univ")), "UL",
+    Full(global, "relates a univ-instance UI and a list of universes UL"))),
   (fun uinst_arg univs_arg ~depth { env ; options } _ state ->
     match uinst_arg, univs_arg with
     | Data uinst, _ ->
@@ -3129,8 +3137,8 @@ term (of the instance it contains) with another one.|};
     | NoData, Data univs ->
       let readback_or_new state = function
         | NoData -> let state, (_,u) = new_univ_level_variable state in state, u, []
-        | Data t -> let state, l, gls = universe_level_variable.Conv.readback ~depth state t in
-        state, Univ.Universe.make l, gls
+        | Data t -> let state, u, gls = univ.Conv.readback ~depth state t in
+        state, u, gls
       in
       let state, levels, gls = U.map_acc readback_or_new state univs in
       state, !: (UVars.Instance.of_array ([||], Array.of_list levels)) +? None, gls

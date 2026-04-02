@@ -394,7 +394,7 @@ val restricted_sigma_of : Univ.Level.Set.t -> state -> Evd.evar_map
 val universes_of_term : state -> EConstr.t -> Univ.Level.Set.t
 
 val universes_of_udecl : state -> UState.universe_decl -> Univ.Level.Set.t
-
+val nf_evar : state -> EConstr.t -> EConstr.t
 val mind_record : Declarations.mind_specif -> Declarations.record_info
 
 val univ_of_sort : Sorts.t -> Univ.Universe.t
