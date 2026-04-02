@@ -512,10 +512,13 @@ macro @uinstance! I :- get-option "coq:uinstance" I. % universe instance
 % declaration)
 macro @monomorphic! :- get-option "coq:univ-poly" ff.
 macro @polymorphic! :- get-option "coq:univ-poly" tt.
-macro @cumulative :- get-option "coq:cumulative" tt.
+macro @cumulative! :- get-option "coq:cumulative" tt.
+macro @not-cumulative! :- get-option "coq:cumulative" ff.
 macro @collapse-sort-variables! :- get-option "coq:collaps-sort-variables" tt.
-macro @udecl! Vs LV Cs LC       :- get-option "coq:udecl" (upoly-decl Vs LV Cs LC).
-macro @udecl-cumul! Vs LV Cs LC :- get-option "coq:udecl-cumul" (upoly-decl-cumul Vs LV Cs LC).
+macro @udecl! Vs LV Cs LC       :- get-option "coq:udecl" (upoly-decl Vs LV Cs LC), 
+  @polymorphic!, @not-cumulative!.
+macro @udecl-cumul! Vs LV Cs LC :- get-option "coq:udecl-cumul" (upoly-decl-cumul Vs LV Cs LC),
+  @polymorphic!, @cumulative!.
 macro @univpoly!       :- @udecl! [] tt [] tt.
 macro @univpoly-cumul! :- @udecl-cumul! [] tt [] tt.
 

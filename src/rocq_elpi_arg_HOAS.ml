@@ -550,9 +550,7 @@ let interp_udecl state poly udecl =
 
 let raw_constant_decl_to_constr ~depth coq_ctx state { name; typ = (bl,typ); body; red; udecl; atts } =
   let env = coq_ctx.env in
-  let poly =
-    let open Attributes in
-    parse_poly (not @@ Option.is_empty body) atts in
+  let poly = parse_poly (not @@ Option.is_empty body) atts in
   let state, udecl = interp_udecl state poly udecl in    
   let sigma = get_sigma state in
   match body, typ with
@@ -581,8 +579,8 @@ let raw_constant_decl_to_glob_synterp ({ name; atts; udecl; typ = (params,typ); 
   let typ = mkGHole in
   let body = Option.map (fun _ -> mkGHole) body in
   let poly = parse_poly (not @@ Option.is_empty body) atts in
-  let state, udecl = interp_udecl state poly udecl in
-  state, { name = raw_decl_name_to_glob name; params; typ; univpoly = poly; udecl; body }
+  state, { name = raw_decl_name_to_glob name; params; typ; univpoly = poly; 
+    udecl = None; body }
   
 let raw_constant_decl_to_glob glob_sign ({ name; atts; udecl; typ = (params,typ); body } : raw_constant_decl) state =
   let intern_env, params = intern_global_context glob_sign ~intern_env:Constrintern.empty_internalization_env params in
@@ -592,7 +590,7 @@ let raw_constant_decl_to_glob glob_sign ({ name; atts; udecl; typ = (params,typ)
   let typ = intern_global_constr_ty ~intern_env glob_sign_params typ in
   let body = Option.map (intern_global_constr ~intern_env glob_sign_params) body in
   let poly = parse_poly (not @@ Option.is_empty body) atts in
-  let state, udecl = interp_udecl state poly udecl in  
+  let state, udecl = interp_udecl state poly udecl in
   state, { name = raw_decl_name_to_glob name; params; typ; univpoly = poly; udecl; body }
 let intern_constant_decl glob_sign (it : raw_constant_decl) = glob_sign, it
 

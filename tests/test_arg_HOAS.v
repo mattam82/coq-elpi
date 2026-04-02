@@ -1,5 +1,3 @@
-
-
 From elpi Require Import elpi.
 
 Elpi Command declarations.
@@ -17,7 +15,7 @@ main [upoly-indt-decl A UD] :- !, std.spy-do! [
   std.assert-ok! (coq.typecheck-indt-decl A) "Illtyped inductive declaration",
   coq.say "typed:" A,
   coq.upoly-decl->attribute UD CL,
-  CL => coq.env.add-indt A _,
+  CL => coq.env.add-indt A _
 ].
 main [const-decl N (some BO) A] :- !, std.spy-do! [
   coq.arity->term A TY,
@@ -299,7 +297,7 @@ Elpi Query lp:{{ coq.locate "X4" GR, coq.env.global GR (pglobal GR _) }}.
 Elpi declarations #[universes(polymorphic)] Inductive X5@{u} : Type@{u} := .
 About X5.
 
-Elpi declarations #[universes(polymorphic)] Inductive X6@{u v|u<v} : Type@{v} := K (u : Type@{u}).
+Elpi declarations #[universes(polymorphic)] Inductive X6@{u v|u<v} : Type@{v} := K (u : Type@{u}). 
 About X6.
 
 Fail Elpi raw_declarations #[universes(polymorphic)] Inductive X7@{u v|u<v} : Type@{v} := K (u : Type@{u}).

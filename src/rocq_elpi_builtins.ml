@@ -1138,12 +1138,13 @@ let add_axiom_or_variable api id ty local_bkind options state =
   let used = universes_of_term state ty in
   if not (is_ground (get_sigma state) ty) then
     err Pp.(str"coq.env.add-const: the type must be ground. Did you forge to call coq.typecheck-indt-decl?");
+  let state = update_sigma state (fun sigma -> 
+    UnivVariances.register_universe_variances_of_type (get_global_env state) sigma ty) in
   let ty = EConstr.to_constr (get_sigma state) ty in
   let sigma = restricted_sigma_of used state in
   (* if poly && Option.has_some local_bkind then
     err Pp.(str api ++ str": section variables cannot be universe polymorphic"); *)
-    Feedback.msg_debug Pp.(str "add_axiom, poly = " ++ bool (univ_poly poly) ++ str" cumulative = " ++ bool cumul);
-  let univs = check_univ_decl_ass (Evd.ustate sigma) udecl ~poly:default_poly_flags in
+  let univs = check_univ_decl_ass (Evd.ustate sigma) udecl ~poly in
   let kind = Decls.Logical in
   let impargs = [] in
   let loc = to_coq_loc @@ State.get Rocq_elpi_builtins_synterp.invocation_site_loc state in
@@ -1775,8 +1776,19 @@ let section_close_section x =
   let a,b,_,_ = Section.close_section x in
   a, b
 [%%endif]
-
-
+[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
+let restrict_constant_universes state body types udecl =
+  let used =
+    Univ.Level.Set.union
+      (universes_of_term state body)
+      (Option.default (EConstr.mkRel 1) types |> universes_of_term state) in
+  let used = Univ.Level.Set.union used (universes_of_udecl state udecl) in
+  restricted_sigma_of used state
+[%%else]
+(* Done by declare_constant since algebraic universes *)
+let restrict_constant_universes state body types udecl =
+  get_sigma state
+[%%endif]
 
 let coq_misc_builtins =
   let open API.BuiltIn in
@@ -2535,7 +2547,6 @@ Supported attributes:
               err Pp.(str"coq.env.add-const: the type must be ground. Did you forge to call coq.typecheck?");
              Some ty in
        let state, poly, cumul, udecl, _ = poly_cumul_udecl_variance_of_options state options in
-       Feedback.msg_debug Pp.(str"poly = " ++ PolyFlags.pr poly);
        let kind = Decls.(IsDefinition Definition) in
        let scope = if Option.has_some local_bkind
         then Locality.Discharge
@@ -2548,17 +2559,7 @@ Supported attributes:
            in the normalized term. *)
        let cinfo = cinfo_make state types options.using ~name:(Id.of_string id) ~typ:types ~impargs:[] () in
        let info = Declare.Info.make ~scope ~kind ~poly:(make_polyflags poly cumul) ~udecl () in
-
-       let used =
-         Univ.Level.Set.union
-           (universes_of_term state body)
-           (Option.default (EConstr.mkRel 1) types |> universes_of_term state) in
-       let used = Univ.Level.Set.union used (universes_of_udecl state udecl) in
-       let sigma = restricted_sigma_of used state in
-       Feedback.msg_debug Pp.(str "declare_definition, poly = " ++ PolyFlags.pr poly ++ str" body = " ++ Printer.pr_econstr_env (Global.env ()) sigma body ++ 
-       pr_opt (Printer.pr_econstr_env (Global.env ()) sigma) types ++  
-       Univ.Level.Set.pr Univ.Level.raw_pr used ++
-       UState.pr (Evd.ustate sigma));
+       let sigma = restrict_constant_universes state body types udecl in       
        let gr, uctx =
          try declare_definition options.using ~cinfo ~info ~opaque ~body sigma
        with Loop_checking.Undeclared l as e ->

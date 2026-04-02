@@ -388,7 +388,7 @@ let universe_variance : (Univ.Level.t * UVars.Variance.t option) API.Conversion.
       B (fun u -> u,Some UVars.Variance.Invariant),
       M (fun ~ok ~ko -> function (u,Some UVars.Variance.Invariant) -> ok u | _ -> ko ()));
     K("irrelevant","",A(universe_level_variable,N),
-      B (fun u -> u,Some UVars.Variance.Invariant),
+      B (fun u -> u,Some UVars.Variance.Irrelevant),
       M (fun ~ok ~ko -> function (u,Some UVars.Variance.Irrelevant) -> ok u | _ -> ko ()));
   ]
 } |> API.ContextualConversion.(!<)
@@ -1521,7 +1521,7 @@ let get_poly_option state map =
   PolyFlags.make ~univ_poly ~cumulative ~collapse_sort_variables
 
 let get_universe_decl state map =
-  match API.Data.StrMap.find_opt "coq:univ-decl" map with
+  match API.Data.StrMap.find_opt "coq:udecl-cumul" map with
   | None -> not_univ_poly
   | Some (t,depth) ->
       let _, ud, gl = universe_decl.Elpi.API.Conversion.readback ~depth state t in
@@ -3492,8 +3492,37 @@ let comInductive_interp_mutual_inductive_constr ~cumulative ~poly ~template ~fin
   ComInductive.interp_mutual_inductive_constr ~arities_explicit:[true] ~template_syntax:[SyntaxAllowsTemplatePoly] ~flags ~udecl ~env_ar_params ~ctx_params
 [%%endif]
 
-
+[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
+let restrict_inductive_universes state arity ktypes nuparams params =
+  let used =
+      List.fold_left (fun acc t ->
+          Univ.Level.Set.union acc
+            (universes_of_term state t))
+        (universes_of_term state arity) ktypes in
+  let used =
+    let open Context.Rel.Declaration in
+    List.fold_left (fun acc -> function
+      | (LocalDef(_,t,b)) ->
+        Univ.Level.Set.union acc
+          (Univ.Level.Set.union
+          (universes_of_term state t)
+          (universes_of_term state b))
+      | (LocalAssum(_,t)) ->
+        Univ.Level.Set.union acc
+          (universes_of_term state t))
+      used (nuparams @ params) in
+  restricted_sigma_of used state
+[%%else]
+(* In univ-alg, done in declare inductive *)
+let restrict_inductive_universes state arity ktypes nuparams params =
+  get_sigma state
+[%%endif]
 let comInductive_interp_mutual_inductive_constr_post x = x
+
+let fix_udecl_variables udecl sigma = 
+  let uinst = udecl.UState.univdecl_instance in
+  let lvars = List.fold_right Univ.Level.Set.add uinst Univ.Level.Set.empty in
+  Evd.fix_undefined_variables ~vars:lvars sigma
 
 let lp2inductive_entry ~depth coq_ctx constraints state t =
 
@@ -3542,6 +3571,9 @@ let lp2inductive_entry ~depth coq_ctx constraints state t =
       (state,[]) ks in
     let knames, ktypes, kparams, kimpls = CList.split4 names_ktypes in
 
+    let state, poly, cumulative, udecl, variances =
+      poly_cumul_udecl_variance_of_options state coq_ctx.options in
+
     let sigma = get_sigma state in
 
     (* Handling of non-uniform parameters *)
@@ -3572,33 +3604,13 @@ let lp2inductive_entry ~depth coq_ctx constraints state t =
 
     let state, (melims, mind, ubinders, uctx) =
       let private_ind = false in
-      let state, poly, cumulative, udecl, variances =
-        poly_cumul_udecl_variance_of_options state coq_ctx.options in
       let the_type =
         let open Context.Rel.Declaration in
         LocalAssum(nameR itname, EConstr.it_mkProd_or_LetIn arity (nuparams @ params)) in
       let env_ar_params = (Global.env ()) |> EC.push_rel the_type |> EC.push_rel_context (nuparams @ params) in
     (* restriction to used universes *)
-    
-    let used =
-      List.fold_left (fun acc t ->
-          Univ.Level.Set.union acc
-            (universes_of_term state t))
-        (universes_of_term state arity) ktypes in
-    let used =
-      let open Context.Rel.Declaration in
-      List.fold_left (fun acc -> function
-        | (LocalDef(_,t,b)) ->
-          Univ.Level.Set.union acc
-           (Univ.Level.Set.union
-            (universes_of_term state t)
-            (universes_of_term state b))
-        | (LocalAssum(_,t)) ->
-          Univ.Level.Set.union acc
-            (universes_of_term state t))
-        used (nuparams @ params) in
-      let sigma = restricted_sigma_of used state in
-
+     let sigma = restrict_inductive_universes state arity ktypes nuparams params in
+     let sigma = fix_udecl_variables udecl sigma in
       state, comInductive_interp_mutual_inductive_constr
         ~sigma
         ~template:(Some false)
