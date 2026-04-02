@@ -1776,7 +1776,7 @@ let section_close_section x =
   let a,b,_,_ = Section.close_section x in
   a, b
 [%%endif]
-[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
+(* [%%if coq = "9.0" || coq = "9.1" || coq = "9.2"] *)
 let restrict_constant_universes state body types udecl =
   let used =
     Univ.Level.Set.union
@@ -1784,11 +1784,12 @@ let restrict_constant_universes state body types udecl =
       (Option.default (EConstr.mkRel 1) types |> universes_of_term state) in
   let used = Univ.Level.Set.union used (universes_of_udecl state udecl) in
   restricted_sigma_of used state
-[%%else]
-(* Done by declare_constant since algebraic universes *)
+(* [%%else]
+(* Done by declare_constant since algebraic universes, however necessary when making
+   (dangerously) mono and polymorphic definitions from the same sigma/sate. *)
 let restrict_constant_universes state body types udecl =
   get_sigma state
-[%%endif]
+[%%endif] *)
 
 let coq_misc_builtins =
   let open API.BuiltIn in
