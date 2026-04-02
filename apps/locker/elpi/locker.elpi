@@ -6,7 +6,13 @@ namespace locker {
 
 func key-lock id, term, arity, option upoly-decl ->.
 key-lock ID Bo Arity UnivDecl :- std.do! [
-  make-key ID Key,
+  make-key ID Key, 
+  
+% This is subtly dangerous: if make-key's constant (always monomorphic) was using 
+% any of the polymorphic univs in UnivDecl, then due to demoting global universes,
+% they would be lost for constant C and the following below. The fragility comes from 
+% using an implicit global universe and constraints store and building multiple 
+% definitions out of it.
 
   coq.arity->term Arity Ty,
   Def = {{ @locked_with lp:Key lp:Ty lp:Bo }},
