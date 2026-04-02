@@ -20,9 +20,9 @@ key-lock ID Bo Arity UnivDecl :- std.do! [
   coq.arity->implicits Arity CImpls,
   if (coq.any-implicit? CImpls)
      (@global! => coq.arguments.set-implicit (const C) [CImpls])
-     true,
+     true, 
 
-  make-key-unlockable ID Def Ty {coq.env.global (const C)} Key,
+  Poly! => make-key-unlockable ID Def Ty {coq.env.global (const C)} Key,
 ].
 
 func make-key id -> term.
@@ -38,6 +38,8 @@ module-lock ID Bo Arity UnivDecl :- std.do! [
   coq.arity->term Arity Ty,
   std.assert-ok! (coq.typecheck-ty Ty _) "locker: definition type illtyped",
   std.assert-ok! (coq.typecheck Bo Ty) "locker: definition body illtyped",
+
+  % FIXME, call minimization after typecheck and return the universe decl.
 
   % we craft all constants now since we need to put *in the interface* the
   % extra universe constraints (if upoly) which are necessary for the body!
@@ -65,7 +67,7 @@ module-lock ID Bo Arity UnivDecl :- std.do! [
 ].
 
 func lock-module-type id, term, term, option upoly-decl -> modtypath.
-lock-module-type ID Ty Bo UnivDecl M :- std.do! [
+lock-module-type ID Ty Bo UnivDecl M :- std.spy-do! [
   Module is ID ^ "_Locked",
   coq.env.begin-module-type Module,
   if (UnivDecl = some UD) (coq.upoly-decl->attribute UD Poly!) (Poly! = true),
@@ -79,7 +81,7 @@ lock-module-type ID Ty Bo UnivDecl M :- std.do! [
 
 :functional
 pred lock-module-body o:modtypath, i:id, i:term, i:term, i:option upoly-decl, o:term, o:modpath.
-lock-module-body Signature ID Ty Bo UnivDecl B M :- std.do! [
+lock-module-body Signature ID Ty Bo UnivDecl B M :- std.spy-do! [
   coq.env.begin-module ID (some Signature),
   if (UnivDecl = some UD) (coq.upoly-decl->attribute UD Poly!) (Poly! = true),
   Poly! => coq.env.add-const "body" Bo Ty @transparent! C,
