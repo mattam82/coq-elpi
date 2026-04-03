@@ -1428,9 +1428,24 @@ let mk_cumulative_universe_decl ((lv, extlv), (csts, extcsts)) =
   { udecl with
     UState.univdecl_variances = Some (List.map (fun (l, v) -> v) lv) }
 
+let default_universe_decl () =
+  let flags = Attributes.(parse poly_def []) in
+  if PolyFlags.cumulative flags then Cumulative (([],true), (Univ.UnivConstraints.empty, true))
+  else if PolyFlags.univ_poly flags then NonCumulative (([], true), (Univ.UnivConstraints.empty, true))
+  else NotUniversePolymorphic
+
+(* An explicit udecl-cumul, udecl or mdecl in the hypotheses takes precedence over the global flags 
+   for universe polymorphism and cumulativity *)    
+
 let get_universe_decl state map =
   match API.Data.StrMap.find_opt "coq:udecl-cumul" map, API.Data.StrMap.find_opt "coq:udecl" map with
-  | None, None -> NotUniversePolymorphic
+  | None, None -> 
+    (match API.Data.StrMap.find_opt "coq:mdecl" map with
+    | Some (b, depth) -> 
+      let _, b, _ = Elpi.Builtin.bool.API.Conversion.readback ~depth state b in
+      if b then NotUniversePolymorphic
+      else default_universe_decl ()
+    | None -> default_universe_decl ())
   | Some _, Some _ -> err Pp.(str"Conflicting attributes: @udecl! and @udecl-cumul! (or @univpoly! and @univpoly-cumul!)")
   | Some (t,depth), None ->
       let _, ud, gl = universe_decl.Elpi.API.Conversion.readback ~depth state t in

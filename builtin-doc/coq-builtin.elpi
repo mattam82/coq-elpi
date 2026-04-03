@@ -510,6 +510,7 @@ macro @uinstance! I :- get-option "coq:uinstance" I. % universe instance
 % The second boolean is tt if this list can be extended by Coq or it has to
 % mention all universe constraints actually required to type check the
 % declaration)
+macro @mdecl!                   :- get-option "coq:mdecl" tt.
 macro @udecl! Vs LV Cs LC       :- get-option "coq:udecl" (upoly-decl Vs LV Cs LC).
 macro @udecl-cumul! Vs LV Cs LC :- get-option "coq:udecl-cumul" (upoly-decl-cumul Vs LV Cs LC).
 macro @univpoly!       :- @udecl! [] tt [] tt.
@@ -835,8 +836,12 @@ external func coq.env.current-section-path -> list string.
 % unspecified and in that case an axiom is added (or a section variable,
 % if a section is open and @local! is used). Omitting the body and the type
 % is
-% an error. Note: using this API for declaring an axiom or a section
-% variable is
+% an error. The UInst is a well-typed universe instance for C in the current
+% universe state.
+% Variables in UInst are rigid, so they cannot be subject to minimization.
+% 
+% Note: using this API for declaring an axiom or a section variable
+% is
 % deprecated, use coq.env.add-axiom or coq.env.add-section-variable
 % instead.
 % Supported attributes:
@@ -858,8 +863,10 @@ coq.env.add-const ID Bo Ty Opaque C :- coq.env.add-const-uinst ID Bo Ty Opaque C
 
 % [coq.env.add-axiom-uinst Name Ty C UInst] Declare a new axiom: C gets a
 % constant derived from Name
-% and the current module. The `UInst` is a well-typed instantiation of C in
-% the current universe state.
+% and the current module. The UInst is a well-typed universe instance for C
+% in the current universe state.
+% Variables in UInst are rigid, so they cannot be subject to minimization.
+% 
 % Supported attributes:
 % - @local! (default: false)
 % - @univpoly! (default unset)

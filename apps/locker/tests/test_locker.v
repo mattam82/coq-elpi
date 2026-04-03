@@ -104,7 +104,7 @@ About up1.body.
 Elpi Query lp:{{ coq.locate "up1" GR, coq.env.univpoly? GR 1 }}.
 
 mlock #[universes(polymorphic=no)] Definition nup1 (T : Type) (x : T) := x.
-About nup1.body.
+About nup1.
 Elpi Query lp:{{ coq.locate "nup1" GR, not(coq.env.univpoly? GR _) }}.
 
 mlock Definition up2@{u +} (T : Type@{u}) (W : Type) (x : T) := x.
@@ -116,5 +116,5 @@ Fail mlock Definition up3@{u} (T : Type@{u}) (W : Type) (x : T) := x.
 (* #704 ----------------------- *)
 
 mlock #[universes(polymorphic)] Definition Bla@{u} (T : bool) : Type@{u} := nat.
-
-Fail mlock #[universes(polymorphic)] Definition Bla' (T : bool) : Type := nat.
+Print Module Bla.
+mlock #[universes(polymorphic)] Definition Bla' (T : bool) : Type := nat.

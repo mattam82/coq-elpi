@@ -2505,7 +2505,9 @@ and the current module; Ty can be left unspecified and in that case the
 inferred one is taken (as in writing Definition x := t); Bo can be left
 unspecified and in that case an axiom is added (or a section variable,
 if a section is open and @local! is used). Omitting the body and the type is
-an error. Note: using this API for declaring an axiom or a section variable is
+an error. The UInst is a well-typed universe instance for C in the current universe state.
+Variables in UInst are rigid, so they cannot be subject to minimization. 
+Note: using this API for declaring an axiom or a section variable is
 deprecated, use coq.env.add-axiom or coq.env.add-section-variable instead.
 Supported attributes:
 - @local! (default: false)
@@ -2573,6 +2575,7 @@ Supported attributes:
         | Locality.Discharge -> Dumpglob.dump_definition lid true "var"
         | Locality.Global _ -> Dumpglob.dump_definition lid false "def"
        in
+       let state = update_sigma state (Evd.fix_undefined_variables ~vars:(snd @@ UVars.Instance.levels uinst)) in
        uctx, state, !: (global_constant_of_globref gr) +! uinst, []))),
   DocAbove);
 
@@ -2587,7 +2590,8 @@ coq.env.add-const ID Bo Ty Opaque C :- coq.env.add-const-uinst ID Bo Ty Opaque C
     Out(constant, "C",
     Out(uinstance, "UInst",
     Full (global, {|Declare a new axiom: C gets a constant derived from Name
-and the current module. The `UInst` is a well-typed instantiation of C in the current universe state.
+and the current module. The UInst is a well-typed universe instance for C in the current universe state.
+Variables in UInst are rigid, so they cannot be subject to minimization. 
 Supported attributes:
 - @local! (default: false)
 - @univpoly! (default unset)
@@ -2597,6 +2601,7 @@ Supported attributes:
   (fun id ty _ _ ~depth {options} _ -> grab_global_env "coq.env.add-axiom-uinst" (fun state ->
      let gr, uinst, uctx = add_axiom_or_variable "coq.env.add-axiom-uinst" id ty None options state in
      let uinst = UVars.Instance.of_level_instance uinst in
+     let state = update_sigma state (Evd.fix_undefined_variables ~vars:(snd @@ UVars.Instance.levels uinst)) in
      uctx, state, !: (global_constant_of_globref gr) +! uinst, []))),
   DocAbove);
 

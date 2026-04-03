@@ -324,6 +324,7 @@ macro @uinstance! I :- get-option "coq:uinstance" I. % universe instance
 % The second boolean is tt if this list can be extended by Coq or it has to
 % mention all universe constraints actually required to type check the
 % declaration)
+macro @mdecl!                   :- get-option "coq:mdecl" tt.
 macro @udecl! Vs LV Cs LC       :- get-option "coq:udecl" (upoly-decl Vs LV Cs LC).
 macro @udecl-cumul! Vs LV Cs LC :- get-option "coq:udecl-cumul" (upoly-decl-cumul Vs LV Cs LC).
 macro @univpoly!       :- @udecl! [] tt [] tt.

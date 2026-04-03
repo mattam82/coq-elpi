@@ -187,8 +187,9 @@ fold-map-arity (arity T) A (arity T1) A1 :- fold-map T A T1 A1.
 % univ.lt U V (le {coq.univ.alg-super U} V).
 
 func coq.upoly-decl->attribute any -> prop.
-coq.upoly-decl->attribute (upoly-decl A B C D) (@udecl! A B C D).
-coq.upoly-decl->attribute (upoly-decl-cumul A B C D) (@udecl-cumul! A B C D).
+coq.upoly-decl->attribute none (@mdecl!).
+coq.upoly-decl->attribute (some (upoly-decl A B C D)) (@udecl! A B C D).
+coq.upoly-decl->attribute (some (upoly-decl-cumul A B C D)) (@udecl-cumul! A B C D).
 
 func coq.upoly-decl.complete-constraints upoly-decl -> upoly-decl.
 coq.upoly-decl.complete-constraints (upoly-decl VS LV CS LC) (upoly-decl VS LV CS1 LC) :- std.do! [
