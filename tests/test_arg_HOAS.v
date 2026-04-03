@@ -16,7 +16,7 @@ main [upoly-indt-decl A UD] :- !, std.spy-do! [
   coq.say "typed:" A,
   if (get-option "coq:univ-poly" UP) true (UP is "undefined"),
   coq.say "univ-poly flag: " UP,
-  coq.upoly-decl->attribute UD CL,
+  coq.upoly-decl->attribute (some UD) CL,
   CL => coq.env.add-indt A _
 ].
 main [const-decl N (some BO) A] :- !, std.spy-do! [
@@ -27,7 +27,7 @@ main [const-decl N (some BO) A] :- !, std.spy-do! [
  main [upoly-const-decl N (some BO) A UD] :- !, std.spy-do! [
   coq.arity->term A TY,
   std.assert-ok! (coq.typecheck BO TY) "illtyped definition",
-  coq.upoly-decl->attribute UD CL,
+  coq.upoly-decl->attribute (some UD) CL,
   CL => coq.env.add-const N BO TY _ _,
 ].
 main [const-decl N none A] :- !, std.spy-do! [
@@ -38,7 +38,7 @@ main [const-decl N none A] :- !, std.spy-do! [
 main [upoly-const-decl N none A UD] :- !, std.spy-do! [
   coq.arity->term A TY,
   std.assert-ok! (coq.typecheck-ty TY _) "illtyped axiom",
-  coq.upoly-decl->attribute UD CL,
+  coq.upoly-decl->attribute (some UD) CL,
   CL => coq.env.add-axiom N TY _,
 ].
 
@@ -66,7 +66,7 @@ main [upoly-indt-decl RA UD] :- !, std.spy-do! [
   coq.univ.print,
   @keepunivs! => std.assert-ok! (coq.elaborate-indt-decl-skeleton RA A) "Illtyped inductive declaration",
   coq.say "typed:" A,
-  coq.upoly-decl->attribute UD CL,
+  coq.upoly-decl->attribute (some UD) CL,
   CL => coq.env.add-indt A _,
 ].
 main [const-decl N (some RBO) RA] :- !, std.spy-do! [
@@ -79,7 +79,7 @@ main [upoly-const-decl N (some RBO) RA UD] :- !, std.spy-do! [
   coq.arity->term RA RTY,
   @keepunivs! => std.assert-ok! (coq.elaborate-ty-skeleton RTY _ TY) "illtyped arity", 
   @keepunivs! => std.assert-ok! (coq.elaborate-skeleton RBO TY BO) "illtyped definition",
-  coq.upoly-decl->attribute UD CL,
+  coq.upoly-decl->attribute (some UD) CL,
   CL => coq.env.add-const N BO TY _ _,
 ].
 main [const-decl N none RA] :- !, std.spy-do! [
@@ -90,7 +90,7 @@ main [const-decl N none RA] :- !, std.spy-do! [
 main [upoly-const-decl N none RA UD] :- !, std.spy-do! [
   coq.arity->term RA RTY,
   @keepunivs! => std.assert-ok! (coq.elaborate-ty-skeleton RTY _ TY) "illtyped axiom",
-  coq.upoly-decl->attribute UD CL,
+  coq.upoly-decl->attribute (some UD) CL,
   CL => coq.env.add-axiom N TY _,
 ].
 
