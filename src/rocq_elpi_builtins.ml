@@ -1148,7 +1148,7 @@ let add_axiom_or_variable api id ty local_bkind options state =
   let loc = to_coq_loc @@ State.get Rocq_elpi_builtins_synterp.invocation_site_loc state in
   let id = Id.of_string id in
   let name = CAst.(make ~loc id) in
-  let gr, _ =
+  let gr, uinst =
     match local_bkind with
     | Some implicit_kind -> begin
         Dumpglob.dump_definition name true "var";
@@ -1161,7 +1161,7 @@ let add_axiom_or_variable api id ty local_bkind options state =
       end
   in
   let ucsts = get_entry_context univs in
-  gr, ucsts
+  gr, uinst, ucsts
   ;;
 
 type tac_abbrev = {
@@ -2493,12 +2493,13 @@ Supported attributes:
          "universe polymorphic constants or inductives."
          );
 
-  MLCode(Pred("coq.env.add-const",
+  MLCode(Pred("coq.env.add-const-uinst",
     In(id,   "Name",
     CIn(B.unspecC closed_ground_term, "Bo",
     CIn(B.unspecC closed_ground_term, "Ty",
     In(flag "opaque?", "Opaque",
     Out(constant, "C",
+    Out(uinstance, "UInst",
     Full (global, {|Declare a new constant: C gets a constant derived from Name
 and the current module; Ty can be left unspecified and in that case the
 inferred one is taken (as in writing Definition x := t); Bo can be left
@@ -2513,8 +2514,8 @@ Supported attributes:
 - @udecl! (default unset)
 - @udecl-cumul! (default unset)
 - @dropunivs! (default: false, drops all universe constraints from the store after the definition)
-|})))))),
-  (fun id body types opaque _ ~depth {options} _ -> grab_global_env__drop_sigma_univs_if_option_is_set options "coq.env.add-const" (fun state ->
+|}))))))),
+  (fun id body types opaque _ _ ~depth {options} _ -> grab_global_env__drop_sigma_univs_if_option_is_set options "coq.env.add-const" (fun state ->
     let local_bkind = if options.local = Some true then Some Glob_term.Explicit else None in
     (* let state = minimize_universes state in *)
     (* Maybe: UState.nf_universes on body and type *)
@@ -2525,8 +2526,9 @@ Supported attributes:
          err Pp.(str "coq.env.add-const: both Type and Body are unspecified")
        | B.Given ty ->
        warn_deprecated_add_axiom ();
-       let gr, uctx = add_axiom_or_variable "coq.env.add-const" id ty local_bkind options state in
-       uctx, state, !: (global_constant_of_globref gr), []
+       let gr, uinst, uctx = add_axiom_or_variable "coq.env.add-const" id ty local_bkind options state in
+       let uinst = UVars.Instance.of_level_instance uinst in
+       uctx, state, !: (global_constant_of_globref gr) +! uinst, []
      end
     | B.Given body ->
        let sigma = get_sigma state in
@@ -2558,8 +2560,8 @@ Supported attributes:
            in the normalized term. *)
        let cinfo = cinfo_make state types options.using ~name:(Id.of_string id) ~typ:types ~impargs:[] () in
        let info = Declare.Info.make ~scope ~kind ~poly:(make_polyflags poly cumul) ~udecl () in
-       let sigma = restrict_constant_universes state body types udecl in       
-       let gr, uctx =
+       let sigma = restrict_constant_universes state body types udecl in
+       let (gr, uinst), uctx =
          try declare_definition options.using ~cinfo ~info ~opaque ~body sigma
        with Loop_checking.Undeclared l as e ->
           Printf.eprintf "Loop_checking.Undeclared %s\n%!" (Univ.Level.to_string l);
@@ -2571,25 +2573,37 @@ Supported attributes:
         | Locality.Discharge -> Dumpglob.dump_definition lid true "var"
         | Locality.Global _ -> Dumpglob.dump_definition lid false "def"
        in
-       uctx, state, !: (global_constant_of_globref gr), []))),
+       uctx, state, !: (global_constant_of_globref gr) +! uinst, []))),
   DocAbove);
 
-  MLCode(Pred("coq.env.add-axiom",
+  LPCode {|
+func coq.env.add-const id, term, term, opaque? -> constant.
+coq.env.add-const ID Bo Ty Opaque C :- coq.env.add-const-uinst ID Bo Ty Opaque C _.
+  |};
+
+  MLCode(Pred("coq.env.add-axiom-uinst",
     In(id,   "Name",
     CIn(closed_ground_term, "Ty",
     Out(constant, "C",
+    Out(uinstance, "UInst",
     Full (global, {|Declare a new axiom: C gets a constant derived from Name
-and the current module.
+and the current module. The `UInst` is a well-typed instantiation of C in the current universe state.
 Supported attributes:
 - @local! (default: false)
 - @univpoly! (default unset)
 - @using! (default: section variables actually used)
 - @inline! (default: no inlining)
-- @inline-at! N (default: no inlining)|})))),
-  (fun id ty _ ~depth {options} _ -> grab_global_env "coq.env.add-axiom" (fun state ->
-     let gr, uctx = add_axiom_or_variable "coq.env.add-axiom" id ty None options state in
-     uctx, state, !: (global_constant_of_globref gr), []))),
+- @inline-at! N (default: no inlining)|}))))),
+  (fun id ty _ _ ~depth {options} _ -> grab_global_env "coq.env.add-axiom-uinst" (fun state ->
+     let gr, uinst, uctx = add_axiom_or_variable "coq.env.add-axiom-uinst" id ty None options state in
+     let uinst = UVars.Instance.of_level_instance uinst in
+     uctx, state, !: (global_constant_of_globref gr) +! uinst, []))),
   DocAbove);
+
+  LPCode {|
+func coq.env.add-axiom id, term -> constant.
+coq.env.add-axiom ID T C :- coq.env.add-axiom-uinst ID T C _.
+  |};
 
   MLCode(Pred("coq.env.add-section-variable",
     In(id,   "Name",
@@ -2601,7 +2615,7 @@ and the current module.
 |}))))),
   (fun id bkind ty _ ~depth {options} _ -> grab_global_env_drop_sigma_keep_univs "coq.env.add-section-variable" (fun state ->
      let bkind = Option.default Glob_term.Explicit (unspec2opt bkind) in
-     let gr, uctx = add_axiom_or_variable "coq.env.add-section-variable" id ty (Some bkind) options state in
+     let gr, _uinst, uctx = add_axiom_or_variable "coq.env.add-section-variable" id ty (Some bkind) options state in
      uctx, state, !: (global_constant_of_globref gr), []))),
   DocAbove);
 

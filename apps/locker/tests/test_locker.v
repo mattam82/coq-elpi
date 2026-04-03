@@ -115,5 +115,6 @@ Fail mlock Definition up3@{u} (T : Type@{u}) (W : Type) (x : T) := x.
 
 (* #704 ----------------------- *)
 
-Set Universe Polymorphism.
-Fail mlock Definition Bla (T : bool) : Type := nat.
+mlock #[universes(polymorphic)] Definition Bla@{u} (T : bool) : Type@{u} := nat.
+
+Fail mlock #[universes(polymorphic)] Definition Bla' (T : bool) : Type := nat.

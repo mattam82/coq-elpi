@@ -826,8 +826,8 @@ external func coq.env.current-section-path -> list string.
 % such as @univpoly!, @univpoly-cumul!, @udecl! or @udecl-cumul! in order to
 % declare universe polymorphic constants or inductives.
 
-% [coq.env.add-const Name Bo Ty Opaque C] Declare a new constant: C gets a
-% constant derived from Name
+% [coq.env.add-const-uinst Name Bo Ty Opaque C UInst] Declare a new
+% constant: C gets a constant derived from Name
 % and the current module; Ty can be left unspecified and in that case
 % the
 % inferred one is taken (as in writing Definition x := t); Bo can be
@@ -848,18 +848,30 @@ external func coq.env.current-section-path -> list string.
 % - @dropunivs! (default: false, drops all universe constraints from the
 % store after the definition)
 % 
-external func coq.env.add-const id, term, term, opaque? -> constant.
+external func coq.env.add-const-uinst id, term, term, 
+                                     opaque? -> constant, univ-instance.
 
-% [coq.env.add-axiom Name Ty C] Declare a new axiom: C gets a constant
-% derived from Name
-% and the current module.
+
+func coq.env.add-const id, term, term, opaque? -> constant.
+coq.env.add-const ID Bo Ty Opaque C :- coq.env.add-const-uinst ID Bo Ty Opaque C _.
+  
+
+% [coq.env.add-axiom-uinst Name Ty C UInst] Declare a new axiom: C gets a
+% constant derived from Name
+% and the current module. The `UInst` is a well-typed instantiation of C in
+% the current universe state.
 % Supported attributes:
 % - @local! (default: false)
 % - @univpoly! (default unset)
 % - @using! (default: section variables actually used)
 % - @inline! (default: no inlining)
 % - @inline-at! N (default: no inlining)
-external func coq.env.add-axiom id, term -> constant.
+external func coq.env.add-axiom-uinst id, term -> constant, univ-instance.
+
+
+func coq.env.add-axiom id, term -> constant.
+coq.env.add-axiom ID T C :- coq.env.add-axiom-uinst ID T C _.
+  
 
 % [coq.env.add-section-variable Name I Ty C] Declare a new section variable:
 % C gets a constant derived from Name
