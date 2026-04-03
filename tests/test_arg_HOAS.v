@@ -14,6 +14,8 @@ main [upoly-indt-decl A UD] :- !, std.spy-do! [
   coq.univ.print,
   std.assert-ok! (coq.typecheck-indt-decl A) "Illtyped inductive declaration",
   coq.say "typed:" A,
+  if (get-option "coq:univ-poly" UP) true (UP is "undefined"),
+  coq.say "univ-poly flag: " UP,
   coq.upoly-decl->attribute UD CL,
   CL => coq.env.add-indt A _
 ].

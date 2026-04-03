@@ -1080,8 +1080,6 @@ let coq_synterp_builtins =
 kind implicit_kind type.
 kind field-attribute type.
 kind upoly-decl type.
-kind upoly-decl-cumul type.
-kind univ-decl type.
 
         |}
       ] @

@@ -634,7 +634,6 @@ Elpi Query lp:{{
   coq.univ.print,
   coq.univ.alg-super UX SLX,
   @udecl! [LX,LY] ff [le SLX UY] ff =>
-    @polymorphic! =>
     coq.env.add-const "poly" Body Type _ _.
 
 /*
@@ -649,7 +648,7 @@ Elpi Query lp:{{
 }}.
 
 About poly.
-Check poly@{Set}. Print poly.
+Check poly@{;0 1}. Print poly.
 About Box.
 
 Elpi Query lp:{{ 
