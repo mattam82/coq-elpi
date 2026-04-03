@@ -58,7 +58,6 @@ module-lock ID Bo Arity UnivDecl :- std.do! [
       coq.upoly-decl.complete-constraints UD UD1,
       UnivDecl1 = some UD1])
     (UnivDecl1 = none),
-
   lock-module-type ID Ty Bo UnivDecl1 Signature,
   lock-module-body Signature ID Ty Bo UnivDecl1 Symbol Module,
 
@@ -72,12 +71,30 @@ module-lock ID Bo Arity UnivDecl :- std.do! [
   make-module-unlockable ID Module,
 ].
 
+func univ-variance->variable univ-variance -> univ.variable.
+univ-variance->variable (auto L) L.
+univ-variance->variable (covariant L) L.
+univ-variance->variable (invariant L) L.
+univ-variance->variable (irrelevant L) L.
+
+func variables->univs i:list univ.variable, o:list univ.
+variables->univs L U :- std.map L (l\r\ coq.univ.variable r l) U.
+
+func upoly-decl->inst option upoly-decl -> univ-instance.
+upoly-decl->inst none O :- coq.univ-instance O [].
+upoly-decl->inst (some (upoly-decl L _ _ _)) O :- variables->univs L LU, coq.univ-instance O LU.
+upoly-decl->inst (some (upoly-decl-cumul LV _ _ _)) O :- 
+  std.map LV univ-variance->variable L,  
+  variables->univs L LU,
+  coq.univ-instance O LU.
+
 func lock-module-type id, term, term, option upoly-decl -> modtypath.
 lock-module-type ID Ty Bo UnivDecl M :- std.do! [
   Module is ID ^ "_Locked",
   coq.env.begin-module-type Module,
   if (UnivDecl = some UD) (coq.upoly-decl->attribute UD Poly!) (Poly! = true),
-  Poly! => coq.env.add-axiom "body" Ty C, coq.env.global (const C) B,
+  Poly! => coq.env.add-axiom-uinst "body" Ty C Uinst,
+  if (UnivDecl = none) (coq.env.global (const C) B) (pglobal (const C) Uinst = B),
   PTY = {{ lp:B = lp:Bo }},
   std.assert-ok! (coq.typecheck-ty PTY _) "lock: unlock statement illtyped",
   if (UnivDecl = some UD) (coq.upoly-decl.complete-constraints UD UD1, coq.upoly-decl->attribute UD1 Poly1!) (Poly1! = true),
