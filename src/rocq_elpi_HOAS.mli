@@ -32,21 +32,12 @@ type univ_cst = Univ.UnivConstraint.t
 type univ_csts = Univ.UnivConstraints.t
 [%%endif]
 
-[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
 type universe_decl = (Univ.Level.t list * bool) * (univ_csts * bool)
 type universe_decl_cumul = ((Univ.Level.t * UVars.Variance.t option) list  * bool) * (univ_csts * bool)
 type universe_decl_option =
   | NotUniversePolymorphic
   | Cumulative of universe_decl_cumul
   | NonCumulative of universe_decl
-type poly_flags = bool (* Just poly *)
-[%%else]
-type universe_decl_option = UState.universe_decl option
-type poly_flags = PolyFlags.t
-[%%endif]
-
-val default_poly_flags : poly_flags (* Not polymorphic *)
-val univ_poly : poly_flags -> bool
 
 type options = {
   hoas_holes : hole_mapping option;
@@ -60,7 +51,6 @@ type options = {
   using : string option;
   inline : Declaremods.inline;
   uinstance : uinstanceoption;
-  poly : poly_flags;
   universe_decl : universe_decl_option;
   reversible : bool option;
   keepunivs : bool option;
@@ -259,14 +249,10 @@ val universe_constraint : Univ.UnivConstraint.t Conversion.t
 
 val universe_variance : (Univ.Level.t * UVars.Variance.t option) Conversion.t
 
-[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
 type any_universe_decl =
   | NonCumul of universe_decl
   | Cumul of universe_decl_cumul
 val universe_decl : any_universe_decl Conversion.t
-[%%else]
-val universe_decl : UState.universe_decl Conversion.t
-[%%endif]
 
 module GRMap : Elpi.API.Utils.Map.S with type key = Names.GlobRef.t
 module GRSet : Elpi.API.Utils.Set.S with type elt = Names.GlobRef.t
@@ -388,7 +374,7 @@ val force_level_of_universe : state -> Univ.Universe.t -> state * Univ.Level.t *
 val purge_algebraic_univs_sort : state -> EConstr.ESorts.t -> state * Sorts.t
 val ideclc : constant
 val uideclc : constant
-val poly_cumul_udecl_variance_of_options : state -> options -> state * poly_flags * bool * UState.universe_decl * UVars.Variance.t option list option
+val poly_cumul_udecl_variance_of_options : state -> options -> state * bool * bool * UState.universe_decl * UVars.Variance.t option list option
 val merge_universe_context : state -> UState.t -> state
 val restricted_sigma_of : Univ.Level.Set.t -> state -> Evd.evar_map
 val universes_of_term : state -> EConstr.t -> Univ.Level.Set.t

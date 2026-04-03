@@ -1119,11 +1119,9 @@ let get_entry_context e =
 
 [%%if coq = "9.0" || coq = "9.1"]
 let make_polyflags poly cumul = poly
-[%%elseif coq = "9.2"]
+[%%else]
 let make_polyflags poly cumul =
   PolyFlags.make ~univ_poly:poly ~cumulative:cumul ~collapse_sort_variables:true
-[%%else]
-let make_polyflags poly cumul = poly
 [%%endif]
 
 let declare_definition using ~cinfo ~info ~opaque ~body sigma =
@@ -1144,7 +1142,7 @@ let add_axiom_or_variable api id ty local_bkind options state =
   let sigma = restricted_sigma_of used state in
   (* if poly && Option.has_some local_bkind then
     err Pp.(str api ++ str": section variables cannot be universe polymorphic"); *)
-  let univs = check_univ_decl_ass (Evd.ustate sigma) udecl ~poly in
+  let univs = check_univ_decl_ass (Evd.ustate sigma) udecl ~poly:(make_polyflags poly cumul) in
   let kind = Decls.Logical in
   let impargs = [] in
   let loc = to_coq_loc @@ State.get Rocq_elpi_builtins_synterp.invocation_site_loc state in

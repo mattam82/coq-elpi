@@ -358,7 +358,7 @@ let dest_udecl ({ UState.univdecl_instance ; univdecl_univ_constraints } : UStat
 let universe_constraint : univ_cst API.Conversion.t =
   let open API.Conversion in let open API.AlgebraicData in declare {
   ty = TyName "univ-constraint";
-  doc = "Constraint between two universes level variables";
+  doc = "Constraint between two universes";
   pp = (fun fmt _ -> Format.fprintf fmt "<todo>");
   constructors = [
     K("le","",A(univ,A(univ,N)),
@@ -370,7 +370,6 @@ let universe_constraint : univ_cst API.Conversion.t =
   ]
 } |> API.ContextualConversion.(!<)
 [%%endif]
-
 
 let universe_variance : (Univ.Level.t * UVars.Variance.t option) API.Conversion.t =
   let open API.Conversion in let open API.AlgebraicData in declare {
@@ -392,10 +391,9 @@ let universe_variance : (Univ.Level.t * UVars.Variance.t option) API.Conversion.
       M (fun ~ok ~ko -> function (u,Some UVars.Variance.Irrelevant) -> ok u | _ -> ko ()));
   ]
 } |> API.ContextualConversion.(!<)
-
-[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
+  
 type universe_decl = (Univ.Level.t list * bool) * (univ_csts * bool)
-type universe_decl_cumul = ((Univ.Level.t * UVars.Variance.t option) list  * bool) * (univ_csts * bool)
+type universe_decl_cumul = ((Univ.Level.t * UVars.Variance.t option) list * bool) * (univ_csts * bool)
 
 type any_universe_decl =
   | NonCumul of universe_decl
@@ -405,11 +403,6 @@ type universe_decl_option =
   | NotUniversePolymorphic
   | Cumulative of universe_decl_cumul
   | NonCumulative of universe_decl
-let not_univ_poly = NotUniversePolymorphic
-
-type poly_flags = bool (* Just poly *)
-let default_poly_flags = false
-let univ_poly p = p
 
 let universe_decl : any_universe_decl API.Conversion.t =
   let open API.Conversion in let open API.BuiltInData in let open API.AlgebraicData in let open Elpi.Builtin in declare {
@@ -425,54 +418,6 @@ let universe_decl : any_universe_decl API.Conversion.t =
      M (fun ~ok ~ko -> function Cumul ((x,sx),(y,sy)) -> ok x sx (univ_csts_to_list y) sy | NonCumul _ -> ko ()))
   ]
 } |> API.ContextualConversion.(!<)
-[%%else]
-type poly_flags = PolyFlags.t
-let univ_poly p = PolyFlags.univ_poly p
-let default_poly_flags = PolyFlags.default
-
-type universe_decl_option = UState.universe_decl option
-let not_univ_poly = None
-let univdecl_of_tuple x sx y sy : UState.universe_decl =
-  let open UState in
-  let univs, variances = List.split x in
-  let variances = if List.for_all Option.is_empty variances then None else Some variances in
-  { univdecl_qualities = [];
-    univdecl_extensible_qualities = true;
-    univdecl_elim_constraints = Sorts.ElimConstraints.empty;
-    univdecl_instance = univs;
-    univdecl_extensible_instance = sx; (* Can new universes be added *)
-    univdecl_variances = variances; (* Universe variance information *)
-    univdecl_univ_constraints = univ_csts_of_list y; (* Declared univ constraints *)
-    univdecl_extensible_constraints = sy; (* Can new constraints (elim or univ) be added *) }
-
-let univdecl_to_tuple udecl =
-  let open UState in
-  let inst = match udecl.univdecl_variances with
-    | None -> List.map (fun x -> x, None) udecl.univdecl_instance
-    | Some vs -> List.map2 (fun x y -> x, y) udecl.univdecl_instance vs
-  in
-  inst, udecl.univdecl_extensible_instance, univ_csts_to_list udecl.univdecl_univ_constraints, udecl.univdecl_extensible_constraints
-
-let universe_decl : UState.universe_decl API.Conversion.t =
-  let open API.Conversion in let open API.BuiltInData in let open API.AlgebraicData in let open Elpi.Builtin in declare {
-  ty = TyName "upoly-decl";
-  doc = "Universe and constraints declaration. Boolean tt means loose (e.g. the '+' in f@{u v + | u < v +})";
-  pp = (fun fmt _ -> Format.fprintf fmt "<todo>");
-  constructors = [
-    K("upoly-decl","",A(list universe_level_variable,A(bool,A(list universe_constraint,A(bool,N)))),
-     B (fun x sx y sy -> univdecl_of_tuple (List.map (fun x -> x, None) x) sx y sy),
-     M (fun ~ok ~ko -> function udecl ->
-      let x, sx, y, sy = univdecl_to_tuple udecl in
-      ok (List.map fst x) sx y sy));
-    K("upoly-decl-cumul","",A(list universe_variance,A(bool,A(list universe_constraint,A(bool,N)))),
-     B (fun x sx y sy -> univdecl_of_tuple x sx y sy),
-     M (fun ~ok ~ko -> function udecl ->
-      let x, sx, y, sy = univdecl_to_tuple udecl in
-      ok x sx y sy))
-  ]
-} |> API.ContextualConversion.(!<)
-
-[%%endif]
 
 let collapse_to_type_sigma sigma s =
   match s with
@@ -524,7 +469,6 @@ type options = {
   using : string option;
   inline : Declaremods.inline;
   uinstance : uinstanceoption;
-  poly : poly_flags;
   universe_decl : universe_decl_option;
   reversible : bool option;
   keepunivs : bool option;
@@ -545,8 +489,7 @@ let default_options () = {
   using = None;
   inline = Declaremods.NoInline;
   uinstance = NoInstance;
-  poly = default_poly_flags;
-  universe_decl = not_univ_poly;
+  universe_decl = NotUniversePolymorphic;
   reversible = None;
   keepunivs = None;
   redflags = None;
@@ -554,11 +497,11 @@ let default_options () = {
   algunivs = Some true;
 }
 let make_options ~hoas_holes ~local ~warn ~depr ~primitive ~failsafe ~ppwidth
-  ~pp ~pplevel ~using ~inline ~uinstance ~poly ~universe_decl ~reversible ~keepunivs
+  ~pp ~pplevel ~using ~inline ~uinstance ~universe_decl ~reversible ~keepunivs
   ~redflags ~no_tc ~algunivs =
   let user_warns = Some UserWarn.{ depr; warn } in
   { hoas_holes; local; user_warns; primitive; failsafe; ppwidth; pp;
-    pplevel; using; inline; uinstance; poly; universe_decl; reversible; keepunivs;
+    pplevel; using; inline; uinstance; universe_decl; reversible; keepunivs;
     redflags; no_tc; algunivs; }
 let make_warn = UserWarn.make_warn
 
@@ -1485,12 +1428,9 @@ let mk_cumulative_universe_decl ((lv, extlv), (csts, extcsts)) =
   { udecl with
     UState.univdecl_variances = Some (List.map (fun (l, v) -> v) lv) }
 
-[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
-let get_poly_option state map = false
-
 let get_universe_decl state map =
   match API.Data.StrMap.find_opt "coq:udecl-cumul" map, API.Data.StrMap.find_opt "coq:udecl" map with
-  | None, None -> not_univ_poly
+  | None, None -> NotUniversePolymorphic
   | Some _, Some _ -> err Pp.(str"Conflicting attributes: @udecl! and @udecl-cumul! (or @univpoly! and @univpoly-cumul!)")
   | Some (t,depth), None ->
       let _, ud, gl = universe_decl.Elpi.API.Conversion.readback ~depth state t in
@@ -1506,28 +1446,6 @@ let get_universe_decl state map =
     | NonCumul ud -> NonCumulative ud
     | Cumul _ -> U.type_error "@udecl! containing a cumulative declaration"
     end
-[%%else]
-let get_bool_option_default state map name default =
-  try
-    let t, depth = API.Data.StrMap.find name map in
-    let _, b, _ = Elpi.Builtin.bool.API.Conversion.readback ~depth state t in
-    b
-  with Not_found -> default
-
-let get_poly_option state map =
-  let univ_poly = get_bool_option_default state map "coq:univ-poly" false in
-  let cumulative = get_bool_option_default state map "coq:cumulative" false in
-  let collapse_sort_variables = get_bool_option_default state map "coq:collapse-sort-variables" true in
-  PolyFlags.make ~univ_poly ~cumulative ~collapse_sort_variables
-
-let get_universe_decl state map =
-  match API.Data.StrMap.find_opt "coq:udecl-cumul" map with
-  | None -> not_univ_poly
-  | Some (t,depth) ->
-      let _, ud, gl = universe_decl.Elpi.API.Conversion.readback ~depth state t in
-      assert (gl = []);
-      Some ud
-[%%endif]
 
 let get_options ~depth hyps state =
   let is_string ~depth t =
@@ -1634,7 +1552,6 @@ let get_options ~depth hyps state =
     let using = get_string_option "coq:using" in
     let inline = get_module_inline_option "coq:inline" in
     let uinstance = get_uinstance_option "coq:uinstance" in
-    let poly = get_poly_option state map in
     let universe_decl = get_universe_decl state map in
     let reversible = get_bool_option "coq:reversible" in
     let no_tc = get_bool_option "coq:no_tc" in
@@ -1642,7 +1559,7 @@ let get_options ~depth hyps state =
     let redflags = get_redflags_option () in
     let algunivs = get_bool_option "coq:keepalgunivs" in
     make_options ~hoas_holes ~local ~warn ~depr ~primitive ~failsafe ~ppwidth
-      ~pp ~pplevel ~using ~inline ~uinstance ~poly ~universe_decl ~reversible ~keepunivs
+      ~pp ~pplevel ~using ~inline ~uinstance ~universe_decl ~reversible ~keepunivs
       ~redflags ~no_tc ~algunivs
 let empty_conv_context ~options state =
   let env = get_global_env state in
@@ -3423,7 +3340,6 @@ let name_universe_level state l =
         { e with sigma }, id
   )
 
-[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
 let poly_cumul_udecl_variance_of_options state options =
   match options.universe_decl with
   | NotUniversePolymorphic -> state, false, false, default_univ_decl, None
@@ -3437,12 +3353,6 @@ let poly_cumul_udecl_variance_of_options state options =
     state, true, false,
     mk_universe_decl univdecl_extensible_instance univdecl_extensible_constraints univdecl_constraints univdecl_instance,
     None
-[%%else]
-let poly_cumul_udecl_variance_of_options state options =
-  let poly = options.poly in
-  let udecl = options.universe_decl in
-  state, poly, PolyFlags.cumulative poly, Option.default UState.default_univ_decl udecl, None
-[%%endif]
 
 [%%if coq = "9.0"]
 let comInductive_interp_mutual_inductive_constr ~cumulative ~poly ~template ~finite =
@@ -3468,7 +3378,7 @@ let comInductive_interp_mutual_inductive_constr ~cumulative ~poly ~template ~fin
   let env_ar = Environ.pop_rel_context (List.length ctx_params) env_ar_params in
   ComInductive.interp_mutual_inductive_constr ~arities_explicit:[true] ~template_syntax:[SyntaxAllowsTemplatePoly] ~flags ~env_ar ~ctx_params
 [%%elif coq = "9.2"]
-let comInductive_interp_mutual_inductive_constr ~cumulative ~poly ~template ~finite ~ctx_params ~env_ar_params =
+let comInductive_interp_mutual_inductive_constr ~cumulative ~poly ~template ~finite ~udecl ~ctx_params ~env_ar_params =
   let flags = {
     ComInductive.poly = PolyFlags.make ~univ_poly:poly ~cumulative ~collapse_sort_variables:true;
     template = Some false;
@@ -3482,13 +3392,14 @@ let comInductive_interp_mutual_inductive_constr ~cumulative ~poly ~template ~fin
 [%%else]
 let comInductive_interp_mutual_inductive_constr ~cumulative ~poly ~template ~finite ~udecl ~variances ~ctx_params ~env_ar_params =
   let flags = {
-    ComInductive.poly = poly;
+    ComInductive.poly = PolyFlags.make ~univ_poly:poly ~cumulative ~collapse_sort_variables:true;
     template = Some false;
     finite;
     mode = None;
     schemes = Default;
   }
   in
+  let udecl = { udecl with UState.univdecl_variances = variances } in
   ComInductive.interp_mutual_inductive_constr ~arities_explicit:[true] ~template_syntax:[SyntaxAllowsTemplatePoly] ~flags ~udecl ~env_ar_params ~ctx_params
 [%%endif]
 
@@ -3614,6 +3525,8 @@ let lp2inductive_entry ~depth coq_ctx constraints state t =
       state, comInductive_interp_mutual_inductive_constr
         ~sigma
         ~template:(Some false)
+        ~poly
+        ~cumulative
         ~udecl
         ~variances
         ~ctx_params:(nuparams @ params)
@@ -3621,8 +3534,6 @@ let lp2inductive_entry ~depth coq_ctx constraints state t =
         ~arities:[arity]
         ~constructors:[knames, ktypes]
         ~env_ar_params
-        ~cumulative
-        ~poly
         ~private_ind
         ~finite:finiteness |> comInductive_interp_mutual_inductive_constr_post
       in
@@ -4008,17 +3919,15 @@ let udecl_of_entry vars csts variances loose_udecl =
   let of_variances variances = 
     match variances with
     | Infer_variances -> 
-      Array.map (fun x -> None) vars |> Array.to_list
+      Array.map (fun x -> x, None) vars |> Array.to_list
     | Check_variances variances ->
       let variances = UVars.Variances.repr variances in
-      let variances = Array.map (fun v -> Some (UVars.VarianceOccurrence.typing_variances v)) variances in
+      let variances = Array.map2 (fun x v -> x, Some (UVars.VarianceOccurrence.typing_variances v)) vars variances in
       Array.to_list variances
   in
-  { univdecl_qualities = []; univdecl_extensible_qualities = loose_udecl;
-    univdecl_elim_constraints = Sorts.ElimConstraints.empty;
-    univdecl_instance = Array.to_list vars; univdecl_extensible_instance = loose_udecl;
-    univdecl_variances = Option.map of_variances variances;
-    univdecl_univ_constraints = csts; univdecl_extensible_constraints = loose_udecl }
+  match variances with
+  | None -> NonCumul ((Array.to_list vars,loose_udecl),(csts, loose_udecl))
+  | Some v -> Cumul ((of_variances v, loose_udecl), (csts, loose_udecl))
 
 let upoly_decl_of ~depth state ~loose_udecl mie =
   let open Entries in
@@ -4032,7 +3941,7 @@ let upoly_decl_of ~depth state ~loose_udecl mie =
       let csts = univs_of_csts uc in   
       let udecl = udecl_of_entry vars csts variances loose_udecl in
       let state, up, gls = universe_decl.API.Conversion.embed ~depth state udecl in
-      state, (fun i -> E.mkApp uideclc i [up]), gls      
+      state, (fun i -> E.mkApp uideclc i [up]), gls
   | Monomorphic_ind_entry -> state, (fun i -> E.mkApp ideclc i []), []
 
 [%%if coq = "9.0" || coq = "9.1"]

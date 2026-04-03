@@ -324,19 +324,10 @@ macro @uinstance! I :- get-option "coq:uinstance" I. % universe instance
 % The second boolean is tt if this list can be extended by Coq or it has to
 % mention all universe constraints actually required to type check the
 % declaration)
-macro @monomorphic! :- get-option "coq:univ-poly" ff.
-macro @polymorphic! :- get-option "coq:univ-poly" tt.
-macro @cumulative! :- get-option "coq:cumulative" tt.
-macro @not-cumulative! :- get-option "coq:cumulative" ff.
-macro @collapse-sort-variables! :- get-option "coq:collaps-sort-variables" tt.
-macro @udecl! Vs LV Cs LC       :- get-option "coq:udecl" (upoly-decl Vs LV Cs LC), 
-  @polymorphic!, @not-cumulative!.
-macro @udecl-cumul! Vs LV Cs LC :- get-option "coq:udecl-cumul" (upoly-decl-cumul Vs LV Cs LC),
-  @polymorphic!, @cumulative!.
+macro @udecl! Vs LV Cs LC       :- get-option "coq:udecl" (upoly-decl Vs LV Cs LC).
+macro @udecl-cumul! Vs LV Cs LC :- get-option "coq:udecl-cumul" (upoly-decl-cumul Vs LV Cs LC).
 macro @univpoly!       :- @udecl! [] tt [] tt.
 macro @univpoly-cumul! :- @udecl-cumul! [] tt [] tt.
-
-% macro @univdecl!  :- get-option "coq:univdecl" 
 
 macro @ppwidth! N :- get-option "coq:ppwidth" N. % printing width
 macro @ppall! :- get-option "coq:pp" "all". % printing all
