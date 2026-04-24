@@ -55,7 +55,6 @@ Elpi Db derive.param2.db lp:{{
       M is "derive.param2: No binary parametricity translation for " ^
               {coq.term->string X},
       stop M.
-
     :name "paramR:fail"
     paramR T T1 TR :-
       M is "derive.param2: No binary parametricity translation linking " ^

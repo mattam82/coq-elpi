@@ -517,10 +517,8 @@ dispatch ((const GR) as C) Suffix Clauses :- do! [
   TermR = pglobal (const CR) UinstR,
   store-param NameR Term Term TermR,
 
-  C1 = (pi ui uir\ param (pglobal C ui) (pglobal C ui) (pglobal (const CR) uir) :- !),
+  C1 = (param.gref C C (const TermR) :- !),
   coq.elpi.accumulate _ "derive.param2.db" (clause _ (before "param:fail") C1),
-  C2 = (pi ui uir\ paramR (pglobal C ui) (pglobal C ui) (pglobal (const CR) uir) :- !),
-  coq.elpi.accumulate _ "derive.param2.db" (clause _ (before "paramR:fail") C2),
   coq.elpi.accumulate _ "derive.param2.db" (clause _ _ (param-done C)),
   Clauses = [param-done C, C1]
 ].
@@ -643,10 +641,8 @@ main T _ Clauses :-
 
 func main_register gref, gref.
 main_register I R :-
-  C1 = (pi ui uir\ param (pglobal I ui) (pglobal I ui) (pglobal R uir) :- !),
+  C1 = (param.gref I I R :- !),
   coq.elpi.accumulate _ "derive.param2.db" (clause _ (before "param:fail") C1),
-  C2 = (pi ui uir\ paramR (pglobal I ui) (pglobal I ui) (pglobal R uir) :- !),
-  coq.elpi.accumulate _ "derive.param2.db" (clause _ (before "paramR:fail") C2),
   coq.elpi.accumulate _ "derive.param2.db" (clause _ _ (param-done I)).
 
 }
