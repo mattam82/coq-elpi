@@ -33,36 +33,30 @@ Elpi Db derive.param2.db lp:{{
 }}.
 #[superglobal] Elpi Accumulate derive.param2.db lp:{{
 
-    % helper to lift undeclared grefs to terms.
-    func global-gref gref, gref -> term.
-    global-gref (const _) GRR TR :- !,
-      coq.env.global GRR TR.
-    % GRR is the yet undeclared param translation of _GT.
-    global-gref _GT GRR (global GRR) :- !.
-
-    % queries param.gref and lifts answer to terms.
-    func dispatch-gref gref -> term,term.
-    dispatch-gref GRT U TR :-
-      param.gref GRT GRU GRR,
-      coq.env.global GRU U,
-      global-gref GRT GRR TR.
-
     :name "param:gref"
-    param T U TR :- 
+    param T U (global GRR) :- 
       coq.env.global GRT T, !, 
-      dispatch-gref GRT U TR.
-
-    :name "paramR:gref"
-    paramR T U TR :- 
+      param.gref GRT GRU GRR,
+      coq.env.global GRU U.
+    % coq.env.global cannot be used since while deriving param the global 
+    % reference is not defined and thus cannot be located.
+    param T U (pglobal GRR _) :- 
       coq.env.global GRT T, !, 
-      dispatch-gref GRT U TR.
-
+      param.gref GRT GRU GRR,
+      coq.env.global GRU U.
     :name "param:fail"
     param X _ _ :-
       M is "derive.param2: No binary parametricity translation for " ^
               {coq.term->string X},
       stop M.
     
+    
+    :name "paramR:gref"
+    paramR T U R :- 
+      coq.env.global GRT T, !, 
+      param.gref GRT GRU GRR,
+      coq.env.global GRU U,
+      coq.env.global GRR R.
     :name "paramR:fail"
     paramR T T1 TR :-
       M is "derive.param2: No binary parametricity translation linking " ^
