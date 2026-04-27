@@ -5,7 +5,7 @@ From elpi.apps.derive Require PrimStringEqb.
 
 Module Coverage.
 
-Inductive empty := .
+Inductive empty@{} := .
 
 Inductive mempty := with mempty' := .
 
@@ -50,7 +50,6 @@ Inductive zeta Sender (Receiver := Sender) := Envelope (a : Sender) (ReplyTo := 
 Inductive beta (A : (fun x : Type => x) Type) := Redex (a : (fun x : Type => x) A).
 
 Inductive iota := Why n (a : match n in peano return Type with Zero => peano | Succ _ => unit end).
-
 Inductive large :=
 | K1 (_ : unit) 
 | K2 (_ : unit) (_ : unit) 

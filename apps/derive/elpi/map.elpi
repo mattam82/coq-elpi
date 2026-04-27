@@ -11,6 +11,7 @@ map-db (app[pglobal (indt GR1) U1|A1]) (app[pglobal (indt GR2) U2|A2]) R :-
   split-at Lno1 A1 Args1 Points1,
   split-at Lno2 A2 Args2 Points2,
   Points1 = Points2, !,
+  % coq.univ-instance.unify-eq (indt GR1) U1 U2 ok,
   map-db {coq.mk-app (pglobal (indt GR1) U1) Args1} {coq.mk-app (pglobal (indt GR2) U2) Args2} F,
   coq.mk-app F Points1 R.
 

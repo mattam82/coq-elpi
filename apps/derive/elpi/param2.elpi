@@ -517,7 +517,7 @@ dispatch ((const GR) as C) Suffix Clauses :- do! [
   TermR = pglobal (const CR) UinstR,
   store-param NameR Term Term TermR,
 
-  C1 = (param.gref C C (const TermR) :- !),
+  C1 = (param.gref C C (const CR) :- !),
   coq.elpi.accumulate _ "derive.param2.db" (clause _ (before "param:fail") C1),
   coq.elpi.accumulate _ "derive.param2.db" (clause _ _ (param-done C)),
   Clauses = [param-done C, C1]

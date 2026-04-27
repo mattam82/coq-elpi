@@ -176,7 +176,7 @@ main GR Name [Clause1, Clause2] :- do! [
   coq.env.add-const-uinst Name R RT _ Cmp CmpI,
 
   % we register it as a clause
-  mk-clause Lno Arity (eq-db (pglobal (indt GR) GRI) (pglobal (indt GR) GRI) (pglobal (const Cmp) CmpI)) :- [!]) Clause1,
+  mk-clause Lno Arity (pi gri cmpi\ eq-db (pglobal (indt GR) gri) (pglobal (indt GR) gri) (pglobal (const Cmp) cmpi) :- [!]) Clause1,
   coq.elpi.accumulate _ "derive.eq.db" (clause _ (before "eq-db:fail") Clause1),
   Clause2 = eq-for GR Cmp,
   coq.elpi.accumulate _ "derive.eq.db" (clause _ _ Clause2),

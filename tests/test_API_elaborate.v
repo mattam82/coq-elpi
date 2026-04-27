@@ -68,7 +68,9 @@ Elpi Accumulate lp:{{
   ].
 }}.
 
-Elpi test.API2 #[universes(polymorphic=no)] Inductive ind1 (A : T1) | (B : Type) :=
+Set Universe Polymorphism.
+
+Elpi test.API2 Inductive ind1 (A : T1) | (B : Type) :=
   K1 : ind1 B -> ind1 B | K2 : A -> ind1 B | K3 (a : A) (a : A): ind1 B.
 
 (*
@@ -132,7 +134,6 @@ wrong constant:,
 *)
 
 Unset Universe Polymorphism.
-(* Weird backtracking/caching bug here*)
 
 Elpi test.API2 Record ind2 (B : T1) := {
    fld1 : B;
