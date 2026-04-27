@@ -39,7 +39,6 @@ Elpi Accumulate record.expand.db lp:{{
 shorten std.{ map }.
 
 :name "expand:start"
-expand (global _ as C) C :- !.
 expand (pglobal _ _ as C) C :- !.
 expand (sort _ as C) C :- !.
 expand (fun N T F) (fun N T1 F1) :- !,
@@ -160,8 +159,9 @@ expand-spine Info (let Name Ty V Bo) (let Name Ty1 V1 Bo1) AccL AccR Premises (p
 expand-spine (info _ GR NGR _ _ _) X Y AccL AccR Premises Clause :-
   expand X Y, !,
   % we build "app[f,x1..xn|rest]"
-  (pi rest1\ coq.mk-app (global GR)  {std.append {std.rev AccL} rest1} (L rest1)),
-  (pi rest2\ coq.mk-app (global NGR) {std.append {std.rev AccR} rest2} (R rest2)),
+  coq.env.global GR (pglobal GR GRI),
+  (pi rest1\ coq.mk-app (pglobal GR GRI) {std.append {std.rev AccL} rest1} (L rest1)),
+  (pi rest2\ coq.mk-app (pglobal NGR GRI) {std.append {std.rev AccR} rest2} (R rest2)),
   % we can now build the clause "expand (app[f,L1..Ln|Rest1]) (app[f1,R1..Rn|Rest2])"
   % here we quantify only the tails, the other variables were quantified during
   % expand-*
@@ -217,8 +217,9 @@ Definition f b (t : r) (q := negb b) := fix rec (l1 l2 : list t) :=
   | cons x xs, cons y ys => andb (op _ x y) (rec xs ys)
   | _, _ => q
   end.
-
-Elpi record.expand r f "expanded_". 
+Set Debug "backtrace".
+Elpi record.expand r f "expanded_".
+Set Printing Universes.
 Print f.
 Print expanded_f.
 

@@ -5,6 +5,7 @@ From elpi.apps.derive Require Export lens.
 From elpi.apps Require Export coercion.
 Require ssr.ssrfun.
 
+Unset Universe Polymorphism.
 Inductive unresolved_record :=
   | Stop 
   | More (T : Type) : T -> unresolved_record -> unresolved_record.

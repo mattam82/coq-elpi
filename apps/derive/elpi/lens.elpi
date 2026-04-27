@@ -89,7 +89,7 @@ func main inductive, string -> list prop.
 main I Prefix Clauses :- std.do! [
   coq.env.indt-decl I Decl, % easy to recurse on
   coq.env.projections I Projs,
-  params Decl Projs (global (indt I)) Names_Projs Defs,
+  params Decl Projs (@global (indt I)) Names_Projs Defs,
   std.map2 Names_Projs Defs (declare-lens Prefix I) Clauses,
   std.forall Clauses (c\coq.elpi.accumulate _ "derive.lens.db" (clause _ _ c)),
 ].

@@ -209,13 +209,14 @@ external symbol tac : ltac1-tactic -> argument.
 % Types of term formers
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+typeabbrev univ-instance (list univ).
+
 % -- terms --------------------------------------------------------------------
 kind term type.
 
 external symbol sort    : sort -> term. % Prop, Type@{i}
 
 % constants: inductive types, inductive constructors, definitions
-external symbol global  : gref -> term.
 external symbol pglobal : gref -> univ-instance -> term.
 
 % binders: to form functions, arities and local definitions
@@ -666,6 +667,10 @@ external func coq.locate id -> gref.
 % - @uinstance! I (default: fresh instance I)
 external func coq.env.typeof gref -> term.
 
+
+macro @global GR :- pglobal GR [].
+
+
 % [coq.env.global GR T] turns a global reference GR into a term, or
 % viceversa.
 % T = (global GR) or, if GR points to a universe polymorphic term,
@@ -854,7 +859,7 @@ external func coq.env.current-section-path -> list string.
 % store after the definition)
 % 
 external func coq.env.add-const-uinst id, term, term, 
-                                     opaque? -> constant, univ-instance.
+                                     opaque? -> constant, list univ.
 
 
 func coq.env.add-const id, term, term, opaque? -> constant.
@@ -873,7 +878,7 @@ coq.env.add-const ID Bo Ty Opaque C :- coq.env.add-const-uinst ID Bo Ty Opaque C
 % - @using! (default: section variables actually used)
 % - @inline! (default: no inlining)
 % - @inline-at! N (default: no inlining)
-external func coq.env.add-axiom-uinst id, term -> constant, univ-instance.
+external func coq.env.add-axiom-uinst id, term -> constant, list univ.
 
 
 func coq.env.add-axiom id, term -> constant.
@@ -898,12 +903,17 @@ coq.env.add-context (context-item Name _I Ty (some Bo) Rest) :-
   coq.env.add-context (Rest {coq.env.global (const C)}).
 
 
-% [coq.env.add-indt Decl I] Declares an inductive type.
+% [coq.env.add-indt-uinst Decl I UInst] Declares an inductive type.
 % Supported attributes:
 % - @dropunivs! (default: false, drops all universe constraints from the
 % store after the definition)
 % - @primitive! (default: false, makes records primitive)
-external func coq.env.add-indt indt-decl -> inductive.
+external func coq.env.add-indt-uinst indt-decl -> inductive, list univ.
+
+
+func coq.env.add-indt indt-decl -> inductive.
+coq.env.add-indt Decl I :- coq.env.add-indt-uinst Decl I _.
+  
 
 % Interactive module construction
 
@@ -1113,33 +1123,23 @@ external func coq.univ.variable.of-term term -> coq.univ.variable.set.
 
 % A universe polymorphic constant can be instantiated with universes.
 % 
-% A univ-instance is morally a list of universes,
-% but its list syntax is hidden in the terms. If you really need to
-% craft or inspect one of these, the following APIs can help you.
+% A univ-instance is simply a list of universes.
 % 
 % Most of the time the user is expected to use coq.env.global which
 % crafts a fresh, appropriate, universe instance and possibly unify that
 % term (of the instance it contains) with another one.
 
-% Universes level instance for a universe-polymorphic constant
-kind univ-instance type.
-
-
-% [coq.univ-instance UI UL] relates a univ-instance UI and a list of
-% universes UL
-external func coq.univ-instance -> univ-instance, list univ.
-
 % [coq.univ-instance.unify-eq GR UI1 UI2 Diagnostic] unifies the two
 % universe instances for the same gref
-external func coq.univ-instance.unify-eq gref, univ-instance, 
-                                        univ-instance -> diagnostic.
+external func coq.univ-instance.unify-eq gref, list univ, 
+                                        list univ -> diagnostic.
 
 % [coq.univ-instance.unify-leq GR UI1 UI2 Diagnostic] unifies the two
 % universe instances for the same gref. Note: if the GR is not *cumulative*
 % (see Cumulative or #[universes(cumulative)]) then this API imposes an
 % equality constraint.
-external func coq.univ-instance.unify-leq gref, univ-instance, 
-                                         univ-instance -> diagnostic.
+external func coq.univ-instance.unify-leq gref, list univ, 
+                                         list univ -> diagnostic.
 
 % -- Declaration of universe polymorphic global terms -----------
 

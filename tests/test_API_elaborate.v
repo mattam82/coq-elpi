@@ -53,6 +53,7 @@ Elpi Query lp:{{
 Elpi Command test.API2.
 
 Elpi Accumulate lp:{{
+  main [upoly-indt-decl D _Udecl] :- coq.say "raw upoly:" D.
   main [indt-decl D] :- coq.say "raw:" D,
     std.assert-ok! (coq.elaborate-indt-decl-skeleton D D1) "illtyped",
     coq.say "elab1:" D1,
@@ -67,9 +68,8 @@ Elpi Accumulate lp:{{
   ].
 }}.
 
-
-Elpi test.API2 Inductive ind1 (A : T1) | (B : Type) :=
-  K1 : ind1 B -> ind1 B | K2 : A -> ind1 B | K3 (a : A) : ind1 B.
+Elpi test.API2 #[universes(polymorphic=no)] Inductive ind1 (A : T1) | (B : Type) :=
+  K1 : ind1 B -> ind1 B | K2 : A -> ind1 B | K3 (a : A) (a : A): ind1 B.
 
 (*
 
@@ -131,8 +131,11 @@ wrong constant:,
 
 *)
 
-Elpi test.API2 Record ind2 (A : T1) := {
-   fld1 : A;
+Unset Universe Polymorphism.
+(* Weird backtracking/caching bug here*)
+
+Elpi test.API2 Record ind2 (B : T1) := {
+   fld1 : B;
    fld2 : fld1 = fld1;
 }.
 
@@ -156,7 +159,7 @@ Elpi Tactic test.
 Elpi Accumulate lp:{{
 solve _ _ :-
   coq.term->string X S,
-  X = global (indc Y),
+  X = @global (indc Y),
   coq.say S.
 }}.
 Goal True.
@@ -166,7 +169,7 @@ Abort.
 Elpi Tactic test2.
 Elpi Accumulate lp:{{
 solve _ _ :-
-  coq.term->string (global (indc Y)) S,
+  coq.term->string (@global (indc Y)) S,
   coq.say S.
 }}.
 Goal True.

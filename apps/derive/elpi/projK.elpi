@@ -34,7 +34,7 @@ sigT-close [N|Mask] Ctx Ty {{ @sigT lp:S lp:P }} :-
 func body-branch int, constructor, term, term, list term, list term -> term.
 body-branch J K  K1 _ VS TS R :-
   default-output J Mask DfltCtx Dflt DfltTy, !,
-  if (coq.safe-dest-app K1 (global (indc K)) _)
+  if (coq.safe-dest-app K1 (pglobal (indc K) Ui) _)
      (nth J VS X, nth J TS XT, zip VS TS Ctx, Args = VS)
      (X = Dflt, XT = DfltTy, Ctx = DfltCtx, map DfltCtx fst Args),
   exT-close Mask Ctx Args X XT R _RT.
@@ -125,7 +125,7 @@ allK-projs Prefix J JN Paramsno Arity IT K KTy Clauses :- do! [
   Name is Prefix ^ {coq.gref->id (indc K)} ^ {any->string J1},
   if (coq.elaborate-skeleton RSkel TyR R ok)
      ((@dropunivs! => coq.env.add-const Name R TyR _ P),
-      Clause = (projK-db K J1 (global (const P)) :- !),
+      Clause = (projK-db K J1 (@global (const P)) :- !),
       coq.elpi.accumulate _ "derive.projK.db" (clause _ (before "projK-db:fail") Clause),
       Clauses = [Clause|ClausesRest])
      (coq.say "skip" Name R, Clauses = ClausesRest),
@@ -141,7 +141,7 @@ for-K Prefix Paramsno Arity IT K KT Clauses :- do! [
 
 func main inductive, string -> list prop.
 main GR Prefix Clauses :- do! [
-  T = global (indt GR),
+  coq.env.global (indt GR) T,
   coq.env.indt GR _ Paramsno _ Arity Kn Kt,
   map2 Kn Kt (for-K Prefix Paramsno Arity T) ClausesList,
   flatten ClausesList Clauses

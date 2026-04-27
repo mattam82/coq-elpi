@@ -705,6 +705,33 @@ let ppinst u = UVars.Instance.pr Sorts.QVar.raw_pr UnivNames.pr_level_with_globa
 let ppinst u = UVars.Instance.pr Sorts.raw_printer u
 [%%endif]
 
+let uinstance = API.BuiltInData.list univ
+
+let uinstance_to_list i =
+  let qvars, uvars = UVars.Instance.to_array i in
+  let i = Array.to_list uvars in
+  i
+
+let uinstance_of_list i =
+  let uvars = Array.of_list i in
+  UVars.Instance.of_array ([||], uvars)
+
+let uinstancein ~depth state i =
+  let i = uinstance_to_list i in
+  let state, i, gl = uinstance.API.Conversion.embed ~depth state i in
+  assert(gl = []);
+  state, i
+ 
+let uinstanceout ~depth state i =
+  let state, i, gls = uinstance.API.Conversion.readback ~depth state i in
+  uinstance_of_list i
+
+let uinstanceina ~loc x =
+  let _qvars, uvars = UVars.Instance.to_array x in
+  let l = Array.to_list uvars in
+  let l = List.map (fun u -> A.mkOpaque ~loc @@ univino u) l in
+  A.list_to_lp_list ~loc l
+(*  
 let uinstancein, uinstanceino, isuinstance, uinstanceout, uinstance =
   let { CD.cin; cino; isc; cout }, uinstance = CD.declare {
     CD.name = "univ-instance";
@@ -718,9 +745,7 @@ let uinstancein, uinstanceino, isuinstance, uinstanceout, uinstance =
     constants = [];
   } in
   cin, cino, isc, cout, uinstance
-;;
-
-let uinstanceina ~loc x = A.mkOpaque ~loc (uinstanceino x)
+;;  *)
 
 let collect_term_variables ~depth t =
   let rec aux ~depth acc t =
@@ -796,14 +821,14 @@ end
 module GRMap = U.Map.Make(GROrd)
 module GRSet = U.Set.Make(GROrd)
 
-let globalc  = E.Constants.declare_global_symbol "global"
 let pglobalc  = E.Constants.declare_global_symbol "pglobal"
 
 module GrefCache = Hashtbl.Make(GlobRef.UserOrd)
 let cache = GrefCache.create 13
 
 let assert_in_coq_gref_consistent ~poly gr =
-  match Global.is_polymorphic gr, poly with
+  let hasinst = not @@ UVars.AbstractContext.is_empty (Global.universes_of_global gr) in
+  match hasinst, poly with
   | true, true -> ()
   | false, false -> ()
   | true, false ->
@@ -812,27 +837,12 @@ let assert_in_coq_gref_consistent ~poly gr =
     U.type_error Printf.(sprintf "Non universe polymorphic gref %s used with the 'pglobal' term constructor" (GROrd.show gr))
 ;;
 
-let assert_in_elpi_gref_consistent ~poly gr =
-  match Global.is_polymorphic gr, poly with
-  | true, true -> ()
-  | false, false -> ()
-  | true, false ->
-    U.anomaly Printf.(sprintf "Universe polymorphic gref %s used with the 'global' term constructor" (GROrd.show gr))
-  | false, true ->
-    U.anomaly Printf.(sprintf "Non universe polymorphic gref %s used with the 'pglobal' term constructor" (GROrd.show gr))
+let assert_in_elpi_gref_consistent gr inst =
+  let univs = Global.universes_of_global gr in
+  if UVars.AbstractContext.size univs = UVars.Instance.length inst then ()
+  else
+    U.anomaly Printf.(sprintf "gref %s used with an instance of incompatible size" (GROrd.show gr))
 ;;
-
-
-let in_elpi_gr ~depth s r =
-  assert_in_elpi_gref_consistent ~poly:false r;
-  try
-    GrefCache.find cache r
-  with Not_found ->
-    let s, t, gl = gref.API.Conversion.embed ~depth s r in
-    assert (gl = []);
-    let x = E.mkAppGlobal globalc t [] in
-    GrefCache.add cache r x;
-    x
 
 let in_elpiast_gref ~loc r =
   match r with
@@ -842,37 +852,34 @@ let in_elpiast_gref ~loc r =
   | GlobRef.ConstRef c -> A.mkAppGlobal ~loc ~hdloc:loc constc (constantina ~loc (Constant c)) []
 
 let in_elpiast_gr ~loc r =
-  assert_in_elpi_gref_consistent ~poly:false r;
-  A.mkAppGlobal ~loc  ~hdloc:loc globalc (in_elpiast_gref ~loc r) []
+  assert_in_elpi_gref_consistent r UVars.Instance.empty;
+  let i = uinstanceina ~loc UVars.Instance.empty in
+  A.mkAppGlobal ~loc  ~hdloc:loc pglobalc (in_elpiast_gref ~loc r) [i]
 
 let in_elpi_poly_gr ~depth s r i =
-  assert_in_elpi_gref_consistent ~poly:true r;
+  assert_in_elpi_gref_consistent r i;
   let open API.Conversion in
   let s, t, gl = gref.embed ~depth s r in
   assert (gl = []);
+  let s, i = uinstancein ~depth s i in
   E.mkApp pglobalc t [i]
 
 let in_elpiast_poly_gr ~loc r i =
-  assert_in_elpi_gref_consistent ~poly:true r;
   let t = in_elpiast_gref ~loc r in
   A.mkAppGlobal ~loc ~hdloc:loc pglobalc t [i]
 
 let in_elpi_poly_gr_instance ~depth s r i =
-  assert_in_elpi_gref_consistent ~poly:true r;
-  let open API.Conversion in
-  let s, i, gl = uinstance.embed ~depth s i in
-  assert (gl = []);
+  assert_in_elpi_gref_consistent r i;
   in_elpi_poly_gr ~depth s r i
-
 let in_elpiast_poly_gr_instance ~loc r i =
-  assert_in_elpi_gref_consistent ~poly:true r;
+  assert_in_elpi_gref_consistent r i;
+  let t = in_elpiast_gref ~loc r in
   let i = uinstanceina ~loc i in
-  in_elpiast_poly_gr ~loc r i
-  
+  A.mkAppGlobal ~loc ~hdloc:loc pglobalc t [i]
+
 let in_coq_gref ~depth ~origin ~failsafe s t =
   try
     let s, t, gls = gref.API.Conversion.readback ~depth s t in
-    assert_in_coq_gref_consistent ~poly:false t;
     assert(gls = []);
     s, t
   with API.Conversion.TypeErr _ ->
@@ -1430,8 +1437,9 @@ let mk_cumulative_universe_decl ((lv, extlv), (csts, extcsts)) =
 
 let default_universe_decl () =
   let flags = Attributes.(parse poly_def []) in
-  if PolyFlags.cumulative flags then Cumulative (([],true), (Univ.UnivConstraints.empty, true))
-  else if PolyFlags.univ_poly flags then NonCumulative (([], true), (Univ.UnivConstraints.empty, true))
+  if PolyFlags.univ_poly flags then
+    if PolyFlags.cumulative flags then Cumulative (([],true), (Univ.UnivConstraints.empty, true))
+    else NonCumulative (([], true), (Univ.UnivConstraints.empty, true))
   else NotUniversePolymorphic
 
 (* An explicit udecl-cumul, udecl or mdecl in the hypotheses takes precedence over the global flags 
@@ -1526,8 +1534,7 @@ let get_options ~depth hyps state =
       match E.look ~depth t with
       | E.UnifVar (head, args) -> VarInstance (head, args, depth)
       | _ ->
-        let _, i, gl = uinstance.Elpi.API.Conversion.readback ~depth state t in
-        assert (gl = []);
+        let i = uinstanceout ~depth state t in
         ConcreteInstance i
     end
     | _ -> NoInstance in
@@ -1713,7 +1720,7 @@ let mk_def ~depth name ~bo ~ty =
 
 let in_elpiast_def ~loc ~v name ~ty ~bo =
   A.mkAppGlobal ~loc ~hdloc:loc defc v [in_elpiast_name ~loc name;ty;bo]
-  
+
 let rec constr2lp coq_ctx ~calldepth ~depth state t =
   assert(depth >= coq_ctx.proof_len);
   let { sigma } = S.get engine state in
@@ -1725,7 +1732,7 @@ let rec constr2lp coq_ctx ~calldepth ~depth state t =
           try state, E.mkConst @@ Names.Id.Map.find n coq_ctx.name2db
           with Not_found ->
             assert(List.mem n coq_ctx.section);
-            state, in_elpi_gr ~depth state (G.VarRef n)
+            state, in_elpi_poly_gr ~depth state (G.VarRef n) UVars.Instance.empty
          end
     | C.Meta _ -> nYI "constr2lp: Meta"
     | C.Evar (k,args) ->
@@ -1770,19 +1777,13 @@ let rec constr2lp coq_ctx ~calldepth ~depth state t =
          let state, hd = aux ~depth env state hd in
          let state, args = CArray.fold_left_map (aux ~depth env) state args in
          state, in_elpi_app ~depth hd args
-    | C.Const(c,i) when Global.is_polymorphic (G.ConstRef c) ->
-         state, in_elpi_poly_gr_instance ~depth state (G.ConstRef c) (EC.EInstance.kind sigma i)
     | C.Const(c,i) ->
-         state, in_elpi_gr ~depth state (G.ConstRef c)
-    | C.Ind (ind, i) when Global.is_polymorphic (G.IndRef ind) ->
-         state, in_elpi_poly_gr_instance ~depth state (G.IndRef ind) (EC.EInstance.kind sigma i)
+         state, in_elpi_poly_gr_instance ~depth state (G.ConstRef c) (EC.EInstance.kind sigma i)
     | C.Ind (ind, i) ->
-         state, in_elpi_gr ~depth state (G.IndRef ind)
-    | C.Construct (construct, i) when Global.is_polymorphic (G.ConstructRef construct) ->
+         state, in_elpi_poly_gr_instance ~depth state (G.IndRef ind) (EC.EInstance.kind sigma i)
+    | C.Construct (construct, i) ->
          let gref = G.ConstructRef construct in
          state, in_elpi_poly_gr_instance ~depth state gref (EC.EInstance.kind sigma i)
-    | C.Construct (construct, i) ->
-         state, in_elpi_gr ~depth state (G.ConstructRef construct)
     | C.Case(ci, u, pms, rt, iv, t, bs) ->
          let (_, (rt,_), _, t, bs) = EConstr.expand_case env sigma (ci, u, pms, rt, iv, t, bs) in
          let state, t = aux ~depth env state t in
@@ -2165,18 +2166,19 @@ let in_coq_poly_gref ~depth ~origin ~failsafe s t i =
           | _ -> assert false
         in
         let s = S.update uim s (UIM.add b u) in
-        s, u, [API.Conversion.Unify (E.mkUnifVar b ~args s,uinstancein u)]
+        let s, ue = uinstancein ~depth s u in
+        s, u, [API.Conversion.Unify (E.mkUnifVar b ~args s,ue)]
       end
     | _ ->
-      let s, ri, extra = uinstance.readback ~depth s i in
+      let ri = uinstanceout ~depth s i in
       let sigma = get_sigma s in
       let eri = EConstr.EInstance.make ri in
-      s, EConstr.EInstance.kind sigma eri, extra
+      s, EConstr.EInstance.kind sigma eri, []
   in
   try
     let s, t, gls1 = gref.readback ~depth s t in
-    assert_in_coq_gref_consistent ~poly:true t;
     let s, i, gls2 = uinstance_readback s i t in
+    assert_in_elpi_gref_consistent t i;
     assert (gls1 = []);
     s, t, i, gls2
   with API.Conversion.TypeErr _ ->
@@ -2195,17 +2197,19 @@ type global_or_pglobal =
   | NotGlobal
   | Var
 
-let is_global_or_pglobal ~depth t =
+let is_global_or_pglobal ~depth state t =
   let do_gr x =
     match E.look ~depth x with
     | E.UnifVar _ -> None
-    | _ -> Some x in
+    | _ -> Some x 
+  in
   let do_ui x =
     match E.look ~depth x with
-    | E.CData c when isuinstance c -> Some (uinstanceout c)
-    | _ -> None in
+    | E.UnifVar _ -> None
+    | _ -> Some (uinstanceout ~depth state x) 
+  in
   match E.look ~depth t with
-  | E.App(c,gr,[]) when c == globalc -> (Global(do_gr gr))
+  (* | E.App(c,gr,[]) when c == globalc -> (Global(do_gr gr)) *)
   | E.App(c,gr,[]) when c == pglobalc -> (PGlobal(do_gr gr, None))
   | E.App(c,gr,[ui]) when c == pglobalc -> (PGlobal(do_gr gr, do_ui ui))
   | E.UnifVar _ -> Var
@@ -2285,19 +2289,11 @@ and lp2constr ~calldepth syntactic_constraints coq_ctx ~depth state ?(on_ty=fals
       let state, u, gsl = sort.API.ContextualConversion.readback ~depth coq_ctx syntactic_constraints state p in
       state, EC.mkSort (EC.ESorts.make u), gsl
  (* constants *)
-  | E.App(c,d,[]) when globalc == c ->
-     let state, gr = in_coq_gref ~depth ~origin:t ~failsafe:coq_ctx.options.failsafe state d in
-     begin match gr with
-     | G.VarRef x -> state, EC.mkVar x, []
-     | G.ConstRef x -> state, EC.UnsafeMonomorphic.mkConst x, []
-     | G.ConstructRef x -> state, EC.UnsafeMonomorphic.mkConstruct x, []
-     | G.IndRef x -> state, EC.UnsafeMonomorphic.mkInd x, []
-     end
   | E.App(c,d,[i]) when pglobalc == c ->
     let state, gr, i, gls =
       in_coq_poly_gref ~depth ~origin:t ~failsafe:coq_ctx.options.failsafe state d i in
     begin match gr with
-    | G.VarRef x -> assert false
+    | G.VarRef x -> assert (UVars.Instance.is_empty i); state, EC.mkVar x, gls
     | G.ConstRef x -> state, EC.mkConstU (x, EC.EInstance.make i), gls
     | G.ConstructRef x -> state, EC.mkConstructU (x, EC.EInstance.make i), gls
     | G.IndRef x -> state, EC.mkIndU (x, EC.EInstance.make i), gls
@@ -3496,10 +3492,10 @@ let lp2inductive_entry ~depth coq_ctx constraints state t =
                  str (pp2string P.(term depth) t)))
       (state,[]) ks in
     let knames, ktypes, kparams, kimpls = CList.split4 names_ktypes in
-
+            
     let state, poly, cumulative, udecl, variances =
       poly_cumul_udecl_variance_of_options state coq_ctx.options in
-
+    Feedback.msg_debug Pp.(str"lp2inductive_entry poly = " ++ bool poly ++ bool (UnivOptions.is_universe_polymorphism ()));
     let sigma = get_sigma state in
 
     (* Handling of non-uniform parameters *)
@@ -3534,24 +3530,24 @@ let lp2inductive_entry ~depth coq_ctx constraints state t =
         let open Context.Rel.Declaration in
         LocalAssum(nameR itname, EConstr.it_mkProd_or_LetIn arity (nuparams @ params)) in
       let env_ar_params = (Global.env ()) |> EC.push_rel the_type |> EC.push_rel_context (nuparams @ params) in
-    (* restriction to used universes *)
-     let sigma = restrict_inductive_universes state arity ktypes nuparams params in
-     let sigma = fix_udecl_variables udecl sigma in
-      state, comInductive_interp_mutual_inductive_constr
-        ~sigma
-        ~template:(Some false)
-        ~poly
-        ~cumulative
-        ~udecl
-        ~variances
-        ~ctx_params:(nuparams @ params)
-        ~indnames:[itname]
-        ~arities:[arity]
-        ~constructors:[knames, ktypes]
-        ~env_ar_params
-        ~private_ind
-        ~finite:finiteness |> comInductive_interp_mutual_inductive_constr_post
-      in
+      (* restriction to used universes *)
+      let sigma = restrict_inductive_universes state arity ktypes nuparams params in
+      let sigma = fix_udecl_variables udecl sigma in
+        state, comInductive_interp_mutual_inductive_constr
+          ~sigma
+          ~template:(Some false)
+          ~poly
+          ~cumulative
+          ~udecl
+          ~variances
+          ~ctx_params:(nuparams @ params)
+          ~indnames:[itname]
+          ~arities:[arity]
+          ~constructors:[knames, ktypes]
+          ~env_ar_params
+          ~private_ind
+          ~finite:finiteness |> comInductive_interp_mutual_inductive_constr_post
+    in
     let mind = { mind with
       Entries.mind_entry_record =
         if finiteness = Declarations.BiFinite then
@@ -3559,7 +3555,6 @@ let lp2inductive_entry ~depth coq_ctx constraints state t =
           else Some None (* regular record *)
         else None } (* not a record *) in
     let i_impls = impls @ nuimpls in
-
     state, melims, mind, uctx, ubinders, i_impls, kimpls, List.(concat (rev gls_rev))
   in
 
@@ -3747,8 +3742,8 @@ let compute_with_uinstance ~depth options state f x inst_opt =
     | None -> state, r, None, []
     | Some uinst ->
       let v' = U.move ~from:v_depth ~to_:depth (E.mkUnifVar v_head ~args:v_args state) in
-      let state, lp_uinst, extra_goals = uinstance.API.Conversion.embed ~depth state uinst in
-      state, r, Some uinst, API.Conversion.Unify (v', lp_uinst) :: extra_goals
+      let state, lp_uinst = uinstancein ~depth state uinst in
+      state, r, Some uinst, [API.Conversion.Unify (v', lp_uinst)]
     
 
 let embed_arity ~depth coq_ctx state (relctx,ty) =
@@ -3929,7 +3924,6 @@ let inductive_decl2lp ~depth coq_ctx constraints state (mutind,uinst,(mind,ind),
 ;;
        
 let udecl_of_entry vars csts variances loose_udecl =
-  let open UState in
   let open Entries in
   let of_variances variances = 
     match variances with

@@ -7,7 +7,7 @@ Elpi Accumulate lp:{{
 main [str S] :-
   coq.locate S GR,
   coq.env.typeof GR Ty,
-  main-import-projections (global GR) Ty.
+  main-import-projections (@global GR) Ty.
 main [trm TSkel] :-
   % input terms are not elaborated yet
   std.assert-ok! (coq.elaborate-skeleton TSkel Ty T) "input term illtyped",
@@ -36,7 +36,7 @@ declare-abbrev Args (some Proj) :-
 Elpi Export import.projections. (* make the command available *)
  
 (**************************** usage examples *********************************)
-
+Unset Universe Polymorphism.
 Record r T (t : T) := Build {
   p1 : nat;
   p2 : t = t;

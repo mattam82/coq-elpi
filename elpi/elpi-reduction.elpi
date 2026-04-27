@@ -44,11 +44,10 @@ whd (fun N T F) [B|C] X XC :- !,
   (pi x\ def x N T B => cache x BN_ => whd (F x) C (F1 x) (C1 x)), X = F1 B, XC = C1 B.
 whd (let N T B F) C X XC :- !,
   (pi x\ def x N T B => cache x BN_ => whd (F x) C (F1 x) (C1 x)), X = F1 B, XC = C1 B.
-whd (global (const GR)) C X XC :- unfold GR none C D DC, !, whd D DC X XC.
 whd (pglobal (const GR) I) C X XC :- unfold GR (some I) C D DC, !, whd D DC X XC.
 whd (primitive (proj _ N)) [A|C] X XC :- whd-indc A _ KA, !,
   whd {proj-red KA N C} X XC.
-whd (global (const GR) as HD) C X XC :- coq.env.primitive? GR, !,
+whd (pglobal (const GR) I as HD) C X XC :- coq.env.primitive? GR, !,
   unwind HD C Orig,
   coq.reduction.lazy.whd_all Orig R,
   if (same_term Orig R) (X = HD, XC = C) (whd R [] X XC).
@@ -71,7 +70,7 @@ whd-mfix (mfix-bo Bs) _ _ Fixno LA K KA RA X XC :-
   whd B ArgsWRedRecNo X XC.
 
 % assert A reduces to a constructor
-whd-indc A GR KA :- whd A [] VA C, !, not(var VA), (VA = global (indc GR); VA = pglobal (indc GR) _), !, KA = C.
+whd-indc A GR KA :- whd A [] VA C, !, not(var VA), VA = pglobal (indc GR) _, !, KA = C.
 
 % [whd1 T R] asserts progress was made in reducing T to R.
 whd1 T R :-
@@ -99,7 +98,7 @@ func fix-red
   (term -> term), term,
   list term, constructor, list term, list term -> term, stack. 
 fix-red F Fix LA GR KA RA X XC :-
-  append LA [{coq.mk-app (global (indc GR)) KA}|RA] ArgsWRedRecNo,
+  append LA [{coq.mk-app (pglobal (indc GR) _) KA}|RA] ArgsWRedRecNo,
   hd-beta {coq.mk-app (F Fix) ArgsWRedRecNo} [] X XC.
 
 :index (_ 2)

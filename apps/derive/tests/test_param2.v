@@ -2,6 +2,7 @@ From elpi.apps Require Import derive.param2.
 
 Set Uniform Inductive Parameters.
 
+Elpi Trace.
 Elpi derive.param2 unit.
 Elpi derive.param2 unit.
 Elpi derive.param2 nat.

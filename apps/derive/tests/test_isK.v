@@ -5,6 +5,7 @@ Import test_derive_corelib.Coverage.
 (* coverage *)
 Module Coverage.
 Elpi derive.isK empty.
+Set Debug "backtrace".
 Elpi derive.isK unit.
 Elpi derive.isK peano.
 Elpi derive.isK option.

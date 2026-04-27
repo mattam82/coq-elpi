@@ -5,7 +5,7 @@ Ltac my_solver := try ((repeat apply: le_n_S); apply: le_0_n).
 
 Elpi Accumulate coercion lp:{{
 
-coercion _ X Ty {{ @sig lp:Ty lp:P }} Solution :- std.do! [
+coercion _ X Ty {{ @sig lp:Ty lp:P }} Solution :- std.spy-do! [
   % we unfold letins since the solve is dumb
   (pi a b b1\ copy a b :- def a _ _ b, !, copy b b1) => copy X X1,
   % we build the solution
