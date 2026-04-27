@@ -64,6 +64,11 @@ reali (fix N Rno T F as Fix) FixR :- !, std.do! [
   FixR = (let N T Fix f\ fix N1 RnoR (TRsubst f) xR\ EtaFixBody f xR),
 ].
 
+:name "reali:gref"
+reali T TR :- 
+  coq.env.global GRT T, !, 
+  derive.param1.dispatch-gref GRT TR.
+
 namespace derive.param1 {
 
 pred reali-args o:list term, o:list term.
@@ -114,7 +119,7 @@ reali-store N X XR :- !,
 
 pred reali-store-indc i:string, i:constructor, i:constructor.
 reali-store-indc Prefix K XR :-
-  reali-store {calc (Prefix ^ {coq.gref->id (indc K)})} (global (indc K)) (global (indc XR)).
+  reali-store {calc (Prefix ^ {coq.gref->id (indc K)})} {coq.env.global (indc K)} {coq.env.global (indc XR)}.
 
 % toplevel predicates %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -125,7 +130,7 @@ func dispatch
   -> list prop.   % the clause
 
 dispatch (const GR) Prefix Clauses :- !, do! [
-  Term = global (const GR),
+  coq.env.global (const GR) Term,
   Name is Prefix ^ {coq.gref->id (const GR)},
   std.assert! (coq.env.const GR (some V) Ty) "param1: cannot handle axioms",
 
@@ -139,16 +144,14 @@ dispatch (const GR) Prefix Clauses :- !, do! [
   std.assert-ok! (coq.unify-leq VRTy TyRV) "param1: constant does not have the right type",
 
   coq.ensure-fresh-global-id Name FName,
-  coq.env.add-const FName VR TyRV _ TermR,
+  coq.env.add-const-uinst FName VR TyRV _ TermR Ui,
+  TermRU = pglobal (const TermR) Ui,
+  reali-store Name Term TermRU,
 
-  reali-store Name Term (global (const TermR)),
-
-  C1 = (reali Term (global (const TermR)) :- !),
+  C1 = (reali.gref (const GR) (const TermR) :- !),
   coq.elpi.accumulate _ "derive.param1.db" (clause _ (before "reali:fail") C1),
-  C2 = (realiR Term (global (const TermR)) :- !),
-  coq.elpi.accumulate _ "derive.param1.db" (clause _ (before "realiR:fail") C2),
   coq.elpi.accumulate _ "derive.param1.db" (clause _ _ (reali-done (const GR))),
-  Clauses = [C1, C2, reali-done (const GR)]
+  Clauses = [reali-done (const GR), C1]
 ].
 
 func prefix-indc string, constructor -> pair constructor id.
@@ -158,16 +161,17 @@ prefix-indc Prefix K (pr K FNewName) :-
   coq.ensure-fresh-global-id NewName FNewName.
 
 dispatch (indt GR) Prefix Clauses :- !, do! [
-  Ind = global (indt GR),
-  coq.env.indt GR _ _ Lno Ty Knames Ktypes,
+  coq.env.global (indt GR) Ind,
+  Ind = pglobal (indt GR) Uinst,
+  @uinstance! Uinst => coq.env.indt GR _ _ Lno Ty Knames Ktypes,
 
   LnoR is 2 * Lno,
-
+  std.map Knames (k\r\ r = pglobal (indc k) Uinst) Ks,
   pi new_name\ sigma KnamesR KtypesR TyR\ (
-    (reali Ind (global (indt new_name)) ==>
+    (reali.gref (indt GR) (indt new_name) ==>
       reali Ty TyR,
-      map2 Knames Ktypes (k\ ty\ r\ sigma tyr\
-        reali ty tyr, coq.subst-fun [global (indc k)] tyr r)
+      map2 Ks Ktypes (k\ ty\ r\ sigma tyr\
+        reali ty tyr, coq.subst-fun [k] tyr r)
       KtypesR),
     map Knames (prefix-indc Prefix) KnamesR,
 
@@ -180,25 +184,36 @@ dispatch (indt GR) Prefix Clauses :- !, do! [
 
   std.assert-ok! (coq.typecheck-indt-decl DeclR) "derive.param1 generates illtyped inductive",
 
-  coq.env.add-indt DeclR GRR,
+  coq.env.add-indt-uinst DeclR GRR GRRI,
 
-  reali-store NewName Ind (global (indt GRR)),
+  reali-store NewName Ind (pglobal (indt GRR) GRRI),
   coq.env.indt GRR _ _ _ _ RealNamesR _,
   Prefix1 is NewName ^ "_",
   forall2 Knames RealNamesR (reali-store-indc Prefix1),
-  C1 = (reali Ind (global (indt GRR)) :- !),
+  C1 = (reali.gref (indt GR) (indt GRR) :- !),
   coq.elpi.accumulate _ "derive.param1.db" (clause _ (before "reali:fail") C1),
-  C2 = (realiR Ind (global (indt GRR)) :- !),
-  coq.elpi.accumulate _ "derive.param1.db" (clause _ (before "realiR:fail") C2),
-  map2 Knames RealNamesR (a\ b\ r\ r = (reali (global (indc a)) (global (indc b)) :- !)) CK,
+  map2 Knames RealNamesR (a\ b\ r\ r = (reali.gref (indc a) (indc b) :- !)) CK,
   forall CK (c\
     coq.elpi.accumulate _ "derive.param1.db" (clause _ (before "reali:fail") c)),
   coq.elpi.accumulate _ "derive.param1.db" (clause _ _ (reali-done (indt GR))),
-  Clauses = [reali-done (indt GR), C1,C2|CK]
+  Clauses = [reali-done (indt GR), C1|CK]
 ].
 
 dispatch (indc _) _ _ :-
   coq.error "derive.param1: cannot translate a constructor".
+
+% helper to lift undeclared grefs to terms.
+func global-gref gref, gref -> term.
+global-gref (const _) GRR TR :- !,
+  coq.env.global GRR TR.
+% GRR is the yet undeclared param translation of _GT.
+global-gref _GT GRR (pglobal GRR Ui_) :- !.
+
+% queries reali.gref and lifts answer to terms.
+func dispatch-gref gref -> term.
+dispatch-gref GRT TR :-
+  reali.gref GRT GRR,
+  global-gref GRT GRR TR.
 
 func main gref, string -> list prop.
 main T _ Clauses :-

@@ -80,18 +80,18 @@ valid-eqType (eqb.value-param _ F) [_|TS] D :- std.do-ok! D [
 ].
 
 pred irrelevant? i:term, o:eqb.trm, o:diagnostic.
-irrelevant? (app [{{ @eq }}, @global EqType, A, B]) (eqb.app EQ EQTYPE [A1,B1]) D :- std.do-ok! D [
+irrelevant? (app [{{ @eq }}, pglobal EqType Ui, A, B]) (eqb.app EQ EQTYPE [A1,B1]) D :- std.do-ok! D [
   std.lift-ok (eqType EqType _) "Not an eqType", %eqb-for Bool Bool _,
-  std.lift-ok ({{ @eq }} = @global EQ) "",
-  term->trm (@global EqType) EQTYPE,
+  std.lift-ok ({{ @eq }} = pglobal EQ _) "",
+  term->trm (pglobal EqType Ui) EQTYPE,
   term->trm A A1,
   term->trm B B1,
 ].
 irrelevant? T R D :- whd1 T T1, irrelevant? T1 R D.
 
 func term->trm term -> eqb.trm, diagnostic.
-term->trm (@global GR) (eqb.global GR) ok :- !.
-term->trm (app [@global GRF,A|As]) (eqb.app GRF A1 As1) D :- !, std.do-ok! D [
+term->trm (pglobal GR _Ui) (eqb.global GR) ok :- !.
+term->trm (app [pglobal GRF _Ui,A|As]) (eqb.app GRF A1 As1) D :- !, std.do-ok! D [
   term->trm A A1,
   map-ok! As term->trm As1,
 ].
@@ -147,8 +147,9 @@ main I [C] :-
 namespace feqb {
 
 func trm->term eqb.trm -> term.
-trm->term (eqb.global GR) (@global GR) :- !.
-trm->term (eqb.app GR A AS) (app[@global GR,A1|AS1]) :- !,
+trm->term (eqb.global GR) T :- !, coq.env.global GR T.
+trm->term (eqb.app GR A AS) (app[T,A1|AS1]) :- !,
+  coq.env.global GR T,
   trm->term A A1,
   std.map AS trm->term AS1.
 trm->term T _ :- coq.error "cannot translate trm" T "to term, did you forget to assume feqb.trm->term ?".

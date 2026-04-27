@@ -574,7 +574,7 @@ coq.build-match T Tty RtyF BranchF (match T Rty Bs) :-
   map Kt (coq.subst-prod LArgs) KtArgs,
   map KtArgs hd-beta-zeta-reduce KtArgsNorm,
   map KtArgsNorm coq.prod->fun KtArgsLam,
-  map Kn (k\r\ sigma K\ coq.env.global (indc k) K, coq.mk-app K LArgs r) KnArgs,
+  map Kn (k\r\ sigma K\ (@uinstance! I => coq.env.global (indc k) K), coq.mk-app K LArgs r) KnArgs,
   map2 KnArgs KtArgsLam (k\t\coq.map-under-fun t (BranchF k)) Bs.
 
 % XXX the list of arguments are often needed in reverse order

@@ -276,7 +276,7 @@ val univout : RawOpaqueData.t -> Univ.Universe.t
 val uinstance : Univ.Universe.t list Conversion.t
 (* val isuinstance : RawOpaqueData.t -> bool *)
 val uinstancein : depth:int -> state -> UVars.Instance.t -> state * term
-val uinstanceout : depth:int -> state -> term -> UVars.Instance.t
+val uinstanceout : depth:int -> state -> term -> state * UVars.Instance.t * Conversion.extra_goals
 val uinstance_to_list : UVars.Instance.t -> Univ.Universe.t list
 val uinstance_of_list : Univ.Universe.t list -> UVars.Instance.t
 

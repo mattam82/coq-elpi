@@ -724,7 +724,7 @@ let uinstancein ~depth state i =
  
 let uinstanceout ~depth state i =
   let state, i, gls = uinstance.API.Conversion.readback ~depth state i in
-  uinstance_of_list i
+  state, uinstance_of_list i, gls
 
 let uinstanceina ~loc x =
   let _qvars, uvars = UVars.Instance.to_array x in
@@ -1534,7 +1534,8 @@ let get_options ~depth hyps state =
       match E.look ~depth t with
       | E.UnifVar (head, args) -> VarInstance (head, args, depth)
       | _ ->
-        let i = uinstanceout ~depth state t in
+        let state, i, gls = uinstanceout ~depth state t in
+        assert (gls = []);
         ConcreteInstance i
     end
     | _ -> NoInstance in
@@ -2170,10 +2171,10 @@ let in_coq_poly_gref ~depth ~origin ~failsafe s t i =
         s, u, [API.Conversion.Unify (E.mkUnifVar b ~args s,ue)]
       end
     | _ ->
-      let ri = uinstanceout ~depth s i in
+      let s, ri, gls = uinstanceout ~depth s i in
       let sigma = get_sigma s in
       let eri = EConstr.EInstance.make ri in
-      s, EConstr.EInstance.kind sigma eri, []
+      s, EConstr.EInstance.kind sigma eri, gls
   in
   try
     let s, t, gls1 = gref.readback ~depth s t in
@@ -2206,7 +2207,10 @@ let is_global_or_pglobal ~depth state t =
   let do_ui x =
     match E.look ~depth x with
     | E.UnifVar _ -> None
-    | _ -> Some (uinstanceout ~depth state x) 
+    | _ -> 
+      let state, i, gls = uinstanceout ~depth state x in
+      assert (gls = []);
+      Some i
   in
   match E.look ~depth t with
   (* | E.App(c,gr,[]) when c == globalc -> (Global(do_gr gr)) *)

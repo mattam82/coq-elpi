@@ -41,7 +41,7 @@ main [indt-decl (record Name _Sort Kname Fields)] :-
   wrap-fields-ty Fields T,
   std.assert-ok! (coq.typecheck T Ty) "oops, wrap-fields-ty is bugged",
   coq.env.add-const Name T Ty _ C,
-  wrap-fields-bo Fields [] T (global (const C)) K KTy,
+  wrap-fields-bo Fields [] T {coq.env.global (const C)} K KTy,
   std.assert-ok! (coq.typecheck K KTy) "oops, wrap-fields-bo is bugged",
   coq.env.add-const Kname K KTy _ _.
 
@@ -49,7 +49,7 @@ main [upoly-indt-decl (record Name _Sort Kname Fields) Udecl] :-
   wrap-fields-ty Fields T,
   std.assert-ok! (coq.typecheck T Ty) "oops, wrap-fields-ty is bugged",
   coq.env.add-const Name T Ty _ C,
-  wrap-fields-bo Fields [] T (pglobal (const C) _) K KTy,
+  wrap-fields-bo Fields [] T {coq.env.global (const C)} K KTy,
   std.assert-ok! (coq.typecheck K KTy) "oops, wrap-fields-bo is bugged",
   coq.env.add-const Kname K KTy _ _.
 

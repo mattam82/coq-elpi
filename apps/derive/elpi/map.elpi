@@ -11,6 +11,7 @@ map-db (app[pglobal (indt GR1) U1|A1]) (app[pglobal (indt GR2) U2|A2]) R :-
   split-at Lno1 A1 Args1 Points1,
   split-at Lno2 A2 Args2 Points2,
   Points1 = Points2, !,
+  % coq.univ-instance.unify-eq (indt GR1) U1 U2 ok,
   map-db {coq.mk-app (pglobal (indt GR1) U1) Args1} {coq.mk-app (pglobal (indt GR2) U2) Args2} F,
   coq.mk-app F Points1 R.
 
@@ -58,7 +59,7 @@ bo-k-args ParamsRev K _ Args Tys R :-
   !. % the first combination that typechecks
 
 pred bo-k-args.aux i:term, i:list term, i:list term, i:term, o:term.
-bo-k-args.aux R [] [] _ R :- coq.typecheck R _ ok.
+bo-k-args.aux R [] [] _ R :- coq.say R, coq.typecheck R _ ok.
 bo-k-args.aux K [A|As] [T|Ts] (prod _ S Ty) R :-
   map-db T S F,
   coq.mk-app F [A] FA,
@@ -84,6 +85,7 @@ pred bo-params
 
 bo-params Lno Lno Ity1 Ity2 A1 _ Ps (fix `f` Recno Fty Bo) :-
   coq.safe-dest-app Ity1 (pglobal (indt I) Ui) _, coq.env.recursive? I, !,
+  coq.say "recursive = yes" I Ity1,
   @pi-decl `rec` Fty f\
     map-db Ity1 Ity2 f =>
       bo-idx A1 Ity1 Ity2 0 Recno Ps (Bo f) Fty.
@@ -110,7 +112,8 @@ bo-params N Lno Ity1 Ity2 T OT Ps R :-
   whd1 T T1, whd1 OT OT1, !,
   bo-params N Lno Ity1 Ity2 T1 OT1 Ps R.
   
-bo-params _ _ _ _ _ _ _ _ :-
+bo-params N Lno Ity1 _ _ _ _ _ :-
+  coq.safe-dest-app Ity1 (pglobal (indt I) Ui) _, coq.say "failing on" Ity1 N Lno, coq.env.recursive? I, !,
   stop "derive.map: Indexed data types not supported".
 
 pred map-pi i:any, o:list prop.
@@ -173,7 +176,8 @@ mk-clause N Lno Ity1 Ity2 X Todo Map C :- whd1 X X1, !,
 func main inductive, string -> list prop.
 main GR Prefix C :- do! [
   coq.env.global (indt GR) T,
-  coq.env.indt GR _Ind Lno Luno Arity _ _,
+  T = pglobal (indt GR) Ui,
+  @uinstance! Ui => coq.env.indt GR _Ind Lno Luno Arity _ _,
   assert! (Lno = Luno) "derive.map: Non-uniform parameters not supported",
 
   % generate map and add to the env
@@ -181,10 +185,10 @@ main GR Prefix C :- do! [
   std.assert-ok! (coq.elaborate-skeleton RSkel Rty R) "derive.map generates illtyped term",
   Name is Prefix ^ "map",
   coq.ensure-fresh-global-id Name FName,
-  coq.env.add-const FName R Rty @transparent! Funct,
+  coq.env.add-const-uinst FName R Rty @transparent! Funct FUi,
 
   % generate clause and add to the db
-  mk-clause 0 Lno T T Arity [] (@global (const Funct)) Clause,
+  mk-clause 0 Lno T T Arity [] (pglobal (const Funct) FUi) Clause,
   coq.elpi.accumulate _ "derive.map.db" (clause _ _ Clause),
   coq.elpi.accumulate _ "derive.map.db" (clause _ _ (map-done GR)),
   C = [map-done GR,Clause]

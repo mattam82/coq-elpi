@@ -146,6 +146,20 @@ rename (prod N T P) [none|LN] (prod N T P') :- !,
   pi x\ rename (P x) LN (P' x).
 rename T _ T :- !.
 
+% helper to lift undeclared grefs to terms.
+func global-gref gref, gref -> term.
+global-gref (const _) GRR TR :- !,
+  coq.env.global GRR TR.
+% GRR is the yet undeclared param translation of _GT.
+global-gref _GT GRR (pglobal GRR Ui_) :- !.
+
+% queries param.gref and lifts answer to terms.
+func dispatch-gref gref -> term,term.
+dispatch-gref GRT U TR :-
+  param.gref GRT GRU GRR,
+  coq.env.global GRU U,
+  global-gref GRT GRR TR.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Class storage functions: %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -193,7 +207,7 @@ dispatch (const GR as C) Suffix Clauses :- do! [
   TermR = pglobal (const CR) UinstR,
   store-param NameR Term Term TermR,
 
-  C1 = (param.gref C C (const TermR) :- !),
+  C1 = (param.gref C C (const CR) :- !),
   coq.elpi.accumulate _ "derive.param2.db" (clause _ (before "param:fail") C1),
   coq.elpi.accumulate _ "derive.param2.db" (clause _ _ (param-done C)),
   Clauses = [param-done C, C1]

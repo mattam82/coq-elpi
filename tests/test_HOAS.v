@@ -573,18 +573,12 @@ Elpi Query lp:{{
 
 Elpi Query lp:{{
   coq.locate "nat" GR,
-  coq.env.global GR (global GR)
+  coq.env.global GR (pglobal GR _)
 }}.
 
 Elpi Query lp:{{
   coq.locate "F" GR,
-  coq.env.global GR (pglobal GR I)
-}}.
-
-
-Elpi Query lp:{{
-  coq.locate "F" GR,
-  not(coq.env.global GR (global GR))
+  coq.env.global GR (pglobal GR [U])
 }}.
 
 Elpi Query lp:{{
@@ -595,12 +589,6 @@ Elpi Query lp:{{
   @uinstance! I => coq.say {coq.env.global GR1}.
 
 }}.
-
-Elpi Query lp:{{
-  coq.univ-instance I [U,U],
-  coq.say I
-}}.
-
 
 (*
 

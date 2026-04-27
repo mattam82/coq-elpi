@@ -59,6 +59,7 @@ Elpi Db derive.param1.db lp:{{
 :index(3)
 func reali term -> term.
 type realiR term -> term -> prop.
+func reali.gref gref -> gref.
 pred reali-done i:gref.
 }}.
 #[superglobal] Elpi Accumulate derive.param1.db lp:{{
@@ -66,6 +67,10 @@ pred reali-done i:gref.
 reali {{ lib:num.int63.type }} {{ lib:elpi.derive.is_uint63 }} :- !.
 reali {{ lib:num.float.type }} {{ lib:elpi.derive.is_float64 }} :- !.
 reali {{ lib:elpi.pstring }} {{ lib:elpi.derive.is_pstring }} :- !.
+
+reali.gref {{:gref lib:num.int63.type }} {{:gref lib:elpi.derive.is_uint63 }} :- !.
+reali.gref {{:gref lib:num.float.type }} {{:gref lib:elpi.derive.is_float64 }} :- !.
+reali.gref {{:gref lib:elpi.pstring }} {{:gref lib:elpi.derive.is_pstring }} :- !.
 
 :name "reali:fail"
 reali X _ :-
@@ -82,6 +87,8 @@ realiR T TR :-
   M is "derive.param1: No unary parametricity translation linking " ^
           {coq.term->string T} ^ " and " ^ {coq.term->string TR},
   stop M.
+
+
 }}.
 
 (* standalone *)
@@ -125,9 +132,8 @@ Elpi Accumulate derive Db derive.param1.db.
 }}.
 
 Elpi Accumulate derive lp:{{
-  
 func derive.on_param1 gref, (func gref, gref, string -> list prop), string -> list prop.
-derive.on_param1 GR F N C :- reali (global GR) (global P), !, F GR P N C.
+derive.on_param1 GR F N C :- reali {coq.env.global GR} {coq.env.global P}, !, F GR P N C.
 
 derivation T N ff (derive "param1" (derive.param1.main T N ) (reali-done T)).
 

@@ -2098,10 +2098,6 @@ Supported attributes:
             else state, gls
           | None -> state, []
         in
-              Feedback.msg_debug Pp.(str"coq.env.global " ++ Names.GlobRef.print gr ++
-      str" ui = " ++
-        match ui_in with None -> str"none"| Some ui -> str"Some " ++ UVars.Instance.pr Sorts.raw_printer ui);
-
         let state, t, _, gls1 =
           compute_with_uinstance ~depth options state mk_global gr ui_in in
         let state, t, gls2 =

@@ -60,11 +60,11 @@ Redirect "tmp" Check eq_refl 0 : projEnvelope1 nat 1 1 (Envelope nat 0 1) = 0.
 Redirect "tmp" Check projEnvelope2 : forall A, A -> A -> zeta A -> A.
 Redirect "tmp" Check eq_refl 0 : projEnvelope2 nat 1 1 (Envelope nat 1 0) = 0.
 Redirect "tmp" Check projRedex1 : forall A, A -> beta A -> A.
-Redirect "tmp" Check projWhy1 : forall n : peano, match n return Type with 
+Redirect "tmp" Check projWhy1 : forall n : peano, match n return Set with 
                     | Zero => peano
                     | Succ _ => unit
                     end -> iota -> peano.
-Redirect "tmp" Check projWhy2 : forall n : peano, match n return Type with 
+Redirect "tmp" Check projWhy2 : forall n : peano, match n return Set with 
                     | Zero => peano
                     | Succ _ => unit
                     end -> iota -> { i : peano & match i with Zero => peano | Succ _ => unit end }.

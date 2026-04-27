@@ -22,10 +22,10 @@ Elpi derive.param1 dyn.
 Elpi derive.param1 zeta.
 Elpi derive.param1 beta.
 Elpi derive.param1 iota.
-Elpi derive.param1 large.
 Elpi derive.param1 prim_int.
 Elpi derive.param1 prim_float.
 Elpi derive.param1 prim_string.
+Elpi derive.param1 large.
 Elpi derive.param1 fo_record.
 Elpi derive.param1 pa_record.
 Elpi derive.param1 pr_record.
@@ -102,6 +102,7 @@ Elpi derive.param1 vec.
 
 Fixpoint vec_length (A : Type) n (v : vec A n) :=
   match v with vnil _ => 0 | vcons _ _ _ w => S (vec_length _ _ w) end.
+
 Elpi derive.param1 vec_length.
 Elpi derive.param1 list.
 Elpi derive.param1 is_list.
