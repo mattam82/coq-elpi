@@ -23,13 +23,14 @@ external symbol tac : ltac1-tactic -> argument.
 % Types of term formers
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+typeabbrev univ-instance (list univ).
+
 % -- terms --------------------------------------------------------------------
 kind term type.
 
 external symbol sort    : sort -> term. % Prop, Type@{i}
 
 % constants: inductive types, inductive constructors, definitions
-external symbol global  : gref -> term.
 external symbol pglobal : gref -> univ-instance -> term.
 
 % binders: to form functions, arities and local definitions

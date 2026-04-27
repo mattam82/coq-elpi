@@ -9,8 +9,8 @@ Elpi Command test.
 Elpi Query lp:{{
   coq.locate "plus" (const GR),
   coq.env.const GR (some BO) TY,
-  coq.locate "nat" GRNat, Nat = global GRNat,
-  coq.locate "S" GRSucc, Succ = global GRSucc,
+  coq.locate "nat" GRNat, Nat = @global GRNat,
+  coq.locate "S" GRSucc, Succ = @global GRSucc,
   TY = (prod _ Nat _\ prod _ Nat _\ Nat),
   BO = (fix _ 0 TY add\
          fun _ Nat n\ fun _ Nat m\
@@ -59,7 +59,7 @@ About add_equal.
 
 Elpi Query lp:{{
   coq.locate "False" F,
-  coq.env.add-axiom "myfalse" (global F) GR,
+  coq.env.add-axiom "myfalse" (@global F) GR,
   coq.env.opaque? GR,
   coq.env.const GR none _,
   coq.env.const-body GR none,
@@ -121,6 +121,7 @@ Elpi Query lp:{{
 Elpi Command primp.
 Elpi Accumulate lp:{{
   main [const-decl _ (some (fun _ _ r\ app[primitive _, r])) _].
+  main [upoly-const-decl _ (some (fun _ _ r\ app[primitive _, r])) _ _].
 }}.
 Elpi primp Definition pc (r : prim_eq_class nat) := r.(prim_eq_f).
 
@@ -148,6 +149,7 @@ main _ :-
 pred rename i:id, o:id.
 rename K S :- S is K ^ "1".
 }}.
+
 Elpi Query indtest lp:{{ main _ }}.
 
 Check myind true false : Prop.

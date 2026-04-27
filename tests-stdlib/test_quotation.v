@@ -57,10 +57,10 @@ Local Notation inlined_sub_rect :=
   (fun K K_S u => let (x, Px) as u return K u := u in K_S x Px).
 
 Unset Auto Template Polymorphism.
-Record is_SUB (T : Type) (P : T -> bool) (sub_sort : Type) := SubType {
+Record is_SUB@{t u} (T : Type@{t}) (P : T -> bool) (sub_sort : Type@{t}) := SubType {
     val : sub_sort -> T;
     Sub : forall x, P x = true -> sub_sort;
-    Sub_rect : forall K (_ : forall x Px, K (@Sub x Px)) u, K u;
+    Sub_rect : forall (K : _ -> Type@{u}) (_ : forall x Px, K (@Sub x Px)) u, K u;
     (* SubK : forall x Px, val (@Sub x Px) = x *)
 }.
 Axiom leq : nat -> nat -> bool.
@@ -78,10 +78,10 @@ Elpi Query lp:{{ std.do! [
 
   std.assert-ok! (coq.elaborate-skeleton T _ T1) "does not typecheck",
   T1 = {{ fun u => SubType _ _ _ _ lp:(X u) _ }},
-  (pi u\ X u = app[global GR, u]) % Rocq <= 9.1
+  (pi u\ X u = app[@global GR, u]) % Rocq <= 9.1
   ;
-  (pi u\ X u = fun _ _ v\ fun _ _ w\ app[global GR, u, v, w]), % Rocq > 9.1
-  std.assert! (K = global GR, coq.locate "Ord" GR) "not the right constructor"
+  (pi u\ X u = fun _ _ v\ fun _ _ w\ app[@global GR, u, v, w]), % Rocq > 9.1
+  std.assert! (K = @global GR, coq.locate "Ord" GR) "not the right constructor"
 ]
 }}.
 

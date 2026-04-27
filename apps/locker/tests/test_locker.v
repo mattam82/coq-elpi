@@ -1,6 +1,7 @@
 From Corelib Require Import ssreflect.
 From elpi.apps Require Import locker.
 
+Unset Universe Polymorphism.
 (* ----------------------- *)
 
 lock Definition d1 := 3.

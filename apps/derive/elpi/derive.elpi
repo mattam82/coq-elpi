@@ -187,7 +187,7 @@ decl+main.post ModName DS CL :- std.do! [
   std.flatten KBlocks KS,
   std.map KS (k\r\ r = indc k) KGRS,
   std.map KGRS coq.gref->id KNS,
-  std.map KGRS (gr\r\ r = global gr) KTS,
+  std.map KGRS (gr\r\ r = @global gr) KTS,
 
   std.append IDs KNS AliasNames,
   std.append ITS KTS AliasTerms,

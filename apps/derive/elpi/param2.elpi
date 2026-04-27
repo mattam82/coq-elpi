@@ -497,8 +497,9 @@ dispatch ((const GR) as C) Suffix Clauses :- do! [
   (not (coq.env.projection? GR _, coq.env.primitive-projection? _ GR _) ;
     coq.error "derive.param2: cannot translate a projection"),
   coq.env.global C Term,
+  Term = pglobal C Uinst,
   NameR is {coq.gref->id C} ^ Suffix,
-  coq.env.const GR OBo Ty,
+  @uinstance! Uinst => coq.env.const GR OBo Ty,
   (OBo = (some X) ;
    std.fatal-error-w-data "Cannot translate local constant without body" GR),
 
@@ -512,12 +513,14 @@ dispatch ((const GR) as C) Suffix Clauses :- do! [
   std.assert-ok! (coq.unify-leq XRTy TyRTermTerm) "param2: constant does not have the right type",
 
   coq.ensure-fresh-global-id NameR FNameR,
-  coq.env.add-const FNameR XR TyRTermTerm _ TermR,
+  coq.env.add-const-uinst FNameR XR TyRTermTerm _ CR UinstR,
+  TermR = pglobal (const CR) UinstR,
+  store-param NameR Term Term TermR,
 
-  store-param NameR Term Term {coq.env.global (const TermR)},
-
-  C1 = (param.gref C C (const TermR) :- !),
+  C1 = (pi ui uir\ param (pglobal C ui) (pglobal C ui) (pglobal (const CR) uir) :- !),
   coq.elpi.accumulate _ "derive.param2.db" (clause _ (before "param:fail") C1),
+  C2 = (pi ui uir\ paramR (pglobal C ui) (pglobal C ui) (pglobal (const CR) uir) :- !),
+  coq.elpi.accumulate _ "derive.param2.db" (clause _ (before "paramR:fail") C2),
   coq.elpi.accumulate _ "derive.param2.db" (clause _ _ (param-done C)),
   Clauses = [param-done C, C1]
 ].
@@ -640,8 +643,10 @@ main T _ Clauses :-
 
 func main_register gref, gref.
 main_register I R :-
-  C1 = (param.gref I I R :- !),
+  C1 = (pi ui uir\ param (pglobal I ui) (pglobal I ui) (pglobal R uir) :- !),
   coq.elpi.accumulate _ "derive.param2.db" (clause _ (before "param:fail") C1),
+  C2 = (pi ui uir\ paramR (pglobal I ui) (pglobal I ui) (pglobal R uir) :- !),
+  coq.elpi.accumulate _ "derive.param2.db" (clause _ (before "paramR:fail") C2),
   coq.elpi.accumulate _ "derive.param2.db" (clause _ _ (param-done I)).
 
 }

@@ -38,7 +38,6 @@ namespace tc {
     std.mem! DB (tc-instance InstGR _).
 
   func under-p-global term -> gref.
-  under-p-global (global GR) GR.
   under-p-global (pglobal GR _) GR.
 
   func class-gref term -> gref.
@@ -175,7 +174,7 @@ namespace tc {
   % [section-var->decl.aux L R] auxiliary function for `section-var->decl`
   func section-var->decl.aux list constant -> list prop.
   section-var->decl.aux [] [].
-  section-var->decl.aux [X|XS] [(decl (global (const X)) _ Ty)|YS] :-
+  section-var->decl.aux [X|XS] [(decl (@global (const X)) _ Ty)|YS] :-
     coq.env.typeof (const X) Ty,
     section-var->decl.aux XS YS.
 

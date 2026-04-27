@@ -16,7 +16,7 @@ Elpi Bound Steps 10000.
 (* tests on full terms *)
 
 Elpi Query lp:{{
-  {{plus}} = global (const GR), coq.env.const GR (some B) T,
+  {{plus}} = @global (const GR), coq.env.const GR (some B) T,
   of B TY RB.
 }}.
 
