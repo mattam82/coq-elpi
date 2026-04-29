@@ -114,8 +114,10 @@ body-params _ T _ _ :-
 
 func main gref, gref, string -> list prop.
 main _ (indt GR) Suffix [Clause,param1-trivial-done (indt GR)] :- do! [
-  coq.env.indt GR _ Lno _ Arity _ _,
-  body-params Lno (global (indt GR)) Arity R,
+  coq.env.global (indt GR) Ind,
+  Ind = pglobal _ Ui,
+  @uinstance! Ui => coq.env.indt GR _ Lno _ Arity _ _,
+  body-params Lno Ind Arity R,
   % coq.say {coq.term->string R},
   std.assert-ok! (coq.typecheck R RT) "derive.param1_trivial generates illtyped term",
 

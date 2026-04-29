@@ -38,7 +38,7 @@ main-K Prefix Ity Arity GRK Clause :-
   coq.ensure-fresh-global-id Name NameF,
   coq.env.add-const NameF T Ty _ IsK,
 
-  Clause = (isK-db GRK (pglobal (const IsK) GRI) :- !).
+  Clause = (isK-db GRK (const IsK) :- !).
 func main1 inductive, string -> list prop.
 main1 GR Prefix Clauses :-
   coq.env.global (indt GR) T,
