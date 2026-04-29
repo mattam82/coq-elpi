@@ -59,7 +59,7 @@ Elpi Db derive.param1.db lp:{{
 :index(3)
 func reali term -> term.
 type realiR term -> term -> prop.
-func reali.gref gref -> gref.
+type reali.gref gref -> gref -> prop.
 pred reali-done i:gref.
 }}.
 #[superglobal] Elpi Accumulate derive.param1.db lp:{{
@@ -81,6 +81,10 @@ reali X _ :-
 realiR {{ lib:num.int63.type }} {{ lib:elpi.derive.is_uint63 }} :- !.
 realiR {{ lib:num.float.type }} {{ lib:elpi.derive.is_float64 }} :- !.
 realiR {{ lib:elpi.pstring }} {{ lib:elpi.derive.is_pstring }} :- !.
+
+realiR T (pglobal GTR _) :-
+  reali.gref GR GTR, !,
+  coq.env.global GR T.
 
 :name "realiR:fail"
 realiR T TR :-

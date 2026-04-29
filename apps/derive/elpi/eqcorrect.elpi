@@ -124,9 +124,9 @@ main GR Name [C] :- do! [
   assert! (induction-db GR IndP) "derive.eqcorrect: use derive.induction first",
   @uinstance! Ui => coq.env.indt GR Ind Lno _ Arity K _KT,
   assert! (Ind = tt) "derive.eqcorrect: co-inductive types not supported",
-
+  coq.env.global IndP IndPT,
   % derive and define the lemma
-  params Lno Arity T {std.map K (k\r\ r = pglobal (indc k) Ui)} IndP [] CmpOK,
+  params Lno Arity T {std.map K (k\r\ r = pglobal (indc k) Ui)} IndPT [] CmpOK,
   std.assert-ok! (coq.typecheck CmpOK CmpTy) "derive.eqcorrect generates illtyped term",
   coq.env.add-const Name CmpOK CmpTy @opaque! Thm,
 
