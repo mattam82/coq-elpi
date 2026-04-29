@@ -18,15 +18,16 @@ has-params? (eqb.value-param _ _).
 % to make the code agnostic on the proof of correctness or reflexivity
 %
 % eg: config {{ @eqb_correct }} {{ @eqb_correct_on }} {{ @eqb_body_correct }} "eqb_correct_on__solver" correct-lemma-for
-pred config  o:term,            o:term,               o:term,                 o:string,                o:(pred i:term, o:term).
+pred config  o:term,            o:term,               o:term,                 o:string,                o:(pred i:gref, o:gref).
 
 func main gref, string -> list prop.
 main (indt I) Prefix CLs :- std.do! [
 
   std.assert! (eqType (indt I) FI) "this inductive is not supported",
 
-  std.assert! (induction-db I Indu) "call derive.induction before",
- 
+  std.assert! (induction-db I GRIndu) "call derive.induction before",
+  coq.env.global GRIndu Indu,
+
   /* Correctness */
 
   (config {{ @eqb_correct }} {{ @eqb_correct_on }} {{ @eqb_body_correct }} "eqb_correct_on__solver" correct-lemma-for =>
@@ -47,9 +48,9 @@ main (indt I) Prefix CLs :- std.do! [
     Namex is Prefix ^ "eqb_correct_aux",
     coq.ensure-fresh-global-id Namex FNamex,
     coq.env.add-const FNamex Rx Tyx @opaque! Correctx,
-    CL_CORRECT = [correct-lemma-for (global (indt I)) (global (const Correctx))]
+    CL_CORRECT = [correct-lemma-for (indt I) (const Correctx)]
 
-  ) (CL_CORRECT = [correct-lemma-for (global (indt I)) (global (const Correct))]),
+  ) (CL_CORRECT = [correct-lemma-for (indt I) (const Correct)]),
 
   /* Reflexivity */
 
@@ -94,8 +95,8 @@ main (const C) Prefix [Clause4, ClauseC, ClauseR] :- std.do! [
   coq.env.add-const FNameC Correct {{ @eqb_correct  lp:X lp:F }} @transparent! CC,
   coq.env.add-const FNameR Refl   {{ @eqb_reflexive lp:X lp:F }} @transparent! CR,
   Clause4 = (eqcorrect-for (const C) CC CR),
-  ClauseC = (correct-lemma-for (global (const C)) (global (const CC))),
-  ClauseR = (refl-lemma-for    (global (const C)) (global (const CR))),
+  ClauseC = (correct-lemma-for (const C) (const CC)),
+  ClauseR = (refl-lemma-for    (const C) (const CR)),
   coq.elpi.accumulate _ "derive.eqbcorrect.db" (clause _ _ Clause4),
   coq.elpi.accumulate _ "derive.eqbcorrect.db" (clause _ _ ClauseC),
   coq.elpi.accumulate _ "derive.eqbcorrect.db" (clause _ _ ClauseR),
@@ -105,14 +106,14 @@ main (indc _) _ _ :- stop "derive.eqbcorrect does not work on a constructor".
 %---------------------------------------------------------------------------
 
 func search-eqcorrect-for term -> term, term.
-search-eqcorrect-for (global (indt I)) (global (const C)) (global (const R)) :-
+search-eqcorrect-for (pglobal (indt I) _) (pglobal (const C) _) (pglobal (const R) _) :-
   std.assert! (eqType (indt I) (eqb.inductive _ _)) "unknown or not applied enough type",
   eqcorrect-for (indt I) C R.
 
-search-eqcorrect-for (app[global (indt I)|Args]) CArgs RArgs :-
+search-eqcorrect-for (app[pglobal (indt I) _|Args]) CArgs RArgs :-
   std.assert! (eqType (indt I) F) "unknown",
   eqcorrect-for (indt I) C R,
-  search-eqcorrect-apply F Args (global (const C)) (global (const R)) CArgs RArgs.
+  search-eqcorrect-apply F Args {coq.env.global (const C)} {coq.env.global (const R)} CArgs RArgs.
 
 func search-eqcorrect-apply eqb.eqType, list term, term, term -> term, term.
 search-eqcorrect-apply (eqb.type-param F) [T|Args] C R C1 R1 :-

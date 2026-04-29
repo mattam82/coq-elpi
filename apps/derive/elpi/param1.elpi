@@ -212,7 +212,7 @@ global-gref _GT GRR (pglobal GRR Ui_) :- !.
 % queries reali.gref and lifts answer to terms.
 func dispatch-gref gref -> term.
 dispatch-gref GRT TR :-
-  reali.gref GRT GRR,
+  reali.gref GRT GRR, !,
   global-gref GRT GRR TR.
 
 func main gref, string -> list prop.
