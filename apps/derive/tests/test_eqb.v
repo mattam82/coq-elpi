@@ -34,7 +34,10 @@ Fail Elpi derive.eqb dep_record.
 Elpi derive.eqb enum.
 Fail Elpi derive.eqb eq.
 Elpi derive.eqb bool.
+Print sigma_bool. 
+(* Elpi Trace. *)
 Elpi derive.eqb sigma_bool.
+
 Elpi derive.eqb sigma_bool2.
 Elpi derive.eqb ord.
 Elpi derive.eqb ord2.

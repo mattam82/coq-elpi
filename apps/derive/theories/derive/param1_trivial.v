@@ -20,10 +20,12 @@ From elpi.apps Require Import derive.param1 derive.param1_congr.
 
   func param1-trivial-done gref ->.
   type param1-trivial-db term -> term -> prop.
+  type param1-trivial-db.ref gref -> gref -> prop.
   type param1-trivial-db-args list term -> list term -> prop.
 
   func param1-inhab-done gref ->.
   type param1-inhab-db term -> term -> prop.
+  type param1-inhab-db.ref gref -> gref -> prop.
   type param1-inhab-db-args list term -> list term -> prop.
 
 }}.
@@ -45,6 +47,10 @@ From elpi.apps Require Import derive.param1 derive.param1_congr.
     param1-inhab-db Hd P, !,
     param1-inhab-db-args Args PArgs.
   
+  param1-inhab-db (pglobal X _) Y :- 
+    param1-inhab-db.ref X GRY,
+    coq.env.global GRY Y, !.
+
   param1-inhab-db-args [] [].
   param1-inhab-db-args [T,P|Args] R :-
     std.assert-ok! (coq.typecheck T Ty) "param1-inhab-db: cannot work illtyped term",
@@ -73,6 +79,10 @@ From elpi.apps Require Import derive.param1 derive.param1_congr.
     if (coq.sort? Ty)
       (param1-trivial-db P Q, R = [T,P,Q|PArgs], param1-trivial-db-args Args PArgs)
       (R = [T,P|PArgs], param1-trivial-db-args Args PArgs).
+
+  param1-trivial-db (pglobal X _) Y :- 
+    param1-trivial-db.ref X GRY,
+    coq.env.global GRY Y, !.
 
 }}.
   

@@ -30,7 +30,7 @@ main-K Prefix Ity Arity GRK Clause :-
   std.assert-ok! (coq.elaborate-skeleton TSek Ty T) "derive.isK generates illtyped term",
   Name is Prefix ^ {coq.gref->id (indc GRK)},
   coq.env.add-const Name T Ty _ IsK,
-  Clause = (pi GRI\ isK-db GRK (pglobal (const IsK) GRI) :- !).
+  Clause = (isK-db GRK (const IsK) :- !).
 
 func main inductive, string -> list prop.
 main GR Prefix Clauses :-
