@@ -123,6 +123,7 @@ func box.declare list constructor, list box-spec -> list prop.
 box.declare [] [] [].
 box.declare [K|Ks] [real-box I|Bs] [C|Cs] :-
   std.assert-ok! (coq.elaborate-indt-decl-skeleton I D) "ILD",
+  coq.say D,
   coq.env.add-indt D IB,
   coq.env.indt IB _ _ _ _ [KB] _,
   C = box-for K IB KB,
