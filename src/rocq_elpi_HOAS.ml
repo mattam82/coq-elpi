@@ -216,7 +216,9 @@ let isuniv, univout, univino, (univ : Univ.Universe.t API.Conversion.t) =
          (* flexible makes {{ Type }} = {{ Set }} also true when coq.unify-eq {{ Type }} {{ Set }} *)
          let state, (_,u) = new_univ_level_variable ~flexible:true state in
          let state = S.update um state (UM.add b u) in
-         state, u, [ API.Conversion.Unify(E.mkUnifVar b ~args state,univin u) ]
+         let state, b' = API.FlexibleData.Elpi.make state in
+         let uvar_pruned = E.mkUnifVar b' ~args:[] state in
+         state, u, [ API.Conversion.Unify (t, uvar_pruned); API.Conversion.Unify(uvar_pruned,univin u) ]
        end
     | _ -> univ_to_be_patched.API.Conversion.readback ~depth state t
   end
@@ -594,7 +596,7 @@ let sort : (Sorts.t, _ conv_context, API.Data.constraints) API.ContextualConvers
           let u = UM.host k m in
           state, Sorts.sort_of_univ u, []
         with Not_found ->
-          let state, (_,u) = new_univ_level_variable state in
+          let state, (_,u) = new_univ_level_variable ~flexible:true state in
           let state = S.update um state (UM.add k u) in
           state, Sorts.sort_of_univ u, []
         end
@@ -2149,7 +2151,7 @@ let uim = S.declare_component ~name:"rocq-elpi:evar-univ-instance-map" ~descript
     
 let in_coq_poly_gref ~depth ~origin ~failsafe s t i =
   let open API.Conversion in
-  let uinstance_readback s i t =
+  let uinstance_readback s i gr =
     match E.look ~depth i with
     | E.UnifVar (b, args) ->
       let m = S.get uim s in
@@ -2157,7 +2159,7 @@ let in_coq_poly_gref ~depth ~origin ~failsafe s t i =
         let u = UIM.host b m in
         s, u, []
       with Not_found ->
-        let u, ctx = UnivGen.fresh_global_instance (get_global_env s) t in
+        let u, ctx = UnivGen.fresh_global_instance (get_global_env s) gr in
         let s = update_sigma s (fun sigma -> Evd.merge_sort_context_set UState.univ_flexible sigma ctx) in
         let u =
           match C.kind u with
@@ -2168,7 +2170,11 @@ let in_coq_poly_gref ~depth ~origin ~failsafe s t i =
         in
         let s = S.update uim s (UIM.add b u) in
         let s, ue = uinstancein ~depth s u in
-        s, u, [API.Conversion.Unify (E.mkUnifVar b ~args s,ue)]
+        let s, b' = API.FlexibleData.Elpi.make s in
+        let uvar_pruned = E.mkUnifVar b' ~args:[] s in
+        (* Feedback.msg_debug Pp.(str"Creating unif var " ++ str (pp2string (P.term depth) uvar_pruned) ++ str " from " ++ str(pp2string (P.term depth) i) ++ str " for " ++ 
+          Names.GlobRef.print gr); *)
+        s, u, [API.Conversion.Unify (i, uvar_pruned); API.Conversion.Unify (uvar_pruned,ue)]
       end
     | _ ->
       let s, ri, gls = uinstanceout ~depth s i in
@@ -3745,7 +3751,9 @@ let compute_with_uinstance ~depth options state f x inst_opt =
     match i with
     | None -> state, r, None, []
     | Some uinst ->
-      let v' = U.move ~from:v_depth ~to_:depth (E.mkUnifVar v_head ~args:v_args state) in
+      let uvar = (E.mkUnifVar v_head ~args:v_args state) in
+      Feedback.msg_debug Pp.(str "making unif variable in compute_with_uinstance: " ++ str (API.RawPp.Debug.show_term uvar));
+      let v' = U.move ~from:v_depth ~to_:depth uvar in
       let state, lp_uinst = uinstancein ~depth state uinst in
       state, r, Some uinst, [API.Conversion.Unify (v', lp_uinst)]
     

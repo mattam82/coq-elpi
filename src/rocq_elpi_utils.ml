@@ -397,7 +397,8 @@ let detype_sort ku sigma x =
   | Type u when ku -> None, detype_universe sigma u
   | VSort (q, u) when ku -> Some (detype_qvar sigma q), detype_universe sigma u
   | GSort (q, u) -> Some (detype_quality sigma (QGlobal q)), if ku then detype_universe sigma u else glob_rigid_univ
-  | _ -> glob_Type_sort
+  | _ -> let glob_Type_sort = None, Glob_term.UAnonymous {rigid=Some UState.univ_flexible} in (* Fixed version from Glob_ops *)
+    glob_Type_sort
 [%%endif]
 
 (*

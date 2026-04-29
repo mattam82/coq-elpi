@@ -118,7 +118,7 @@ main _ (indt GR) Suffix [ClauseW, param1-inhab-done (indt GR)] :- do! [
   Name is {coq.gref->id (indt GR)} ^ Suffix,
   coq.env.add-const Name R RT @transparent! Witness,
 
-  ClauseW = (param1-inhab-db (global (indt GR)) (global (const Witness))),
+  ClauseW = (param1-inhab-db.ref (indt GR) (const Witness)),
   coq.elpi.accumulate _ "derive.param1.trivial.db" (clause _ _ ClauseW),
   coq.elpi.accumulate _ "derive.param1.trivial.db" (clause _ _ (param1-inhab-done (indt GR))),
 ].
