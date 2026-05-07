@@ -144,8 +144,8 @@ dispatch (const GR) Prefix Clauses :- !, do! [
   std.assert-ok! (coq.unify-leq VRTy TyRV) "param1: constant does not have the right type",
 
   coq.ensure-fresh-global-id Name FName,
-  coq.env.add-const-uinst FName VR TyRV _ TermR Ui,
-  TermRU = pglobal (const TermR) Ui,
+  coq.env.add-const FName VR TyRV _ TermR,
+  coq.env.global (const TermR) TermRU,
   reali-store Name Term TermRU,
 
   C1 = (reali.gref (const GR) (const TermR) :- !),

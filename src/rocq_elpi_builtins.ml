@@ -731,37 +731,39 @@ let set_accumulate_to_db_interp, get_accumulate_to_db_interp =
   (fun x -> f := x),
   (fun () -> !f)
 
-let is_global_level env u =
-  let set = Univ.Level.Set.singleton u in
+let is_global_levels env set =
   match UGraph.check_declared_universes (Environ.universes env) set with
   | Ok () -> true
   | Error _ -> false
 
+let is_global_level env l = is_global_levels env (Univ.Level.Set.singleton l)
+
 let err_if_contains_alg_univ ~depth t =
   let env = Global.env () in
   let is_global u =
-    match Univ.Universe.level u with
-    | None -> true
-    | Some l -> is_global_level env l in
-  let rec aux ~depth (acc,acci) t =
+    let levels = Univ.Universe.levels u in
+    is_global_levels env levels in
+  let rec aux ~depth acc t =
     match E.look ~depth t with
     | E.CData c when isuniv c ->
         let u = univout c in
-        if is_global u then acc, acci
+        if is_global u then acc
         else
+          Univ.Universe.Set.add u acc
+(* 
           begin match Univ.Universe.level u with
           | None ->
             err Pp.(strbrk "The hypothetical clause contains terms of type univ which are not global, you should abstract them out or replace them by global ones: " ++
               Univ.Universe.pr UnivNames.pr_level_with_global_universes u)
           | _ -> Univ.Universe.Set.add u acc, acci
-          end
-    | x -> Rocq_elpi_utils.fold_elpi_term aux (acc,acci) ~depth x
+          end *)
+    | x -> Rocq_elpi_utils.fold_elpi_term aux acc ~depth x
   in
-  let univs = aux ~depth (Univ.Universe.Set.empty,0) t in
+  let univs = aux ~depth Univ.Universe.Set.empty t in
   univs
 
 let preprocess_clause ~depth clause =
-  let levels_to_abstract, instances_to_abstract = err_if_contains_alg_univ ~depth clause in
+  let levels_to_abstract = err_if_contains_alg_univ ~depth clause in
   let levels_to_abstract_no = Univ.Universe.Set.cardinal levels_to_abstract in
   let rec subst ~depth m mi t =
     match E.look ~depth t with
@@ -794,10 +796,11 @@ let preprocess_clause ~depth clause =
         E.mkBuiltin E.Pi [E.mkLam (*   pi x\  *)
             (bindi (d+1) map mapi ua (n-1))]
      in
-       bindi depth Univ.Universe.Map.empty (ref (depth+instances_to_abstract))
-         (Univ.Universe.Set.elements levels_to_abstract) instances_to_abstract
+       bindi depth Univ.Universe.Map.empty (ref (depth))
+         (Univ.Universe.Set.elements levels_to_abstract) 0
   in
   let vars = collect_term_variables ~depth clause in
+  (* Feedback.msg_debug Pp.(str " accumulating clause : " ++ str(pp2string (P.term depth) clause)); *)
   vars, clause
 
 let argument_mode = let open Conv in let open API.AlgebraicData in declare {
@@ -2078,15 +2081,15 @@ Supported attributes:
               end
           | _ -> state, None, []
     in
-    let state, gr_out, ui_in =
+    let state, gr_out, ui_in, glsu =
       match t with
-      | NoData -> state, None, None
+      | NoData -> state, None, None, []
       | Data maybe_t ->
-          match is_global_or_pglobal ~depth state maybe_t with
+          let state, igs, gls = is_global_or_pglobal ~depth state maybe_t in
+          match igs with
           | NotGlobal -> raise No_clause
-          | Var -> state, None, None
-          | (Global maybe_gr) -> state, maybe_gr, None
-          | (PGlobal(maybe_gr,maybe_ui)) -> state, maybe_gr, maybe_ui
+          | Var -> state, None, None, gls
+          | (PGlobal(maybe_gr,maybe_ui)) -> state, maybe_gr, maybe_ui, gls
       in
     match gr_in, gr_out with
     | Some gr, _ ->
@@ -2102,7 +2105,7 @@ Supported attributes:
           compute_with_uinstance ~depth options state mk_global gr ui_in in
         let state, t, gls2 =
           closed_ground_term.CConv.embed ~depth ctx csts state t in
-        state, ?: None +! t, gls @ gls1 @ gls2
+        state, ?: None +! t, glsu @ gls @ gls1 @ gls2
     | None, Some maybe_gr ->
         let state, gr, gls = gref.Conv.readback ~depth state maybe_gr in
         let state, t, _, gls1 =
@@ -2110,7 +2113,7 @@ Supported attributes:
         let state, t, gls2 =
           closed_ground_term.CConv.embed ~depth ctx csts state t in
         let maybe_t = match ui_in with Some _ -> None | None -> Some t in
-        state, !: maybe_gr +? maybe_t, gls @ gls1 @ gls2
+        state, !: maybe_gr +? maybe_t, glsu @ gls @ gls1 @ gls2
     | None, None -> err Pp.(str "coq.env.global: no input, all arguments are variables"))),
   DocAbove);
 

@@ -137,7 +137,7 @@ Elpi Accumulate derive Db derive.param1.db.
 
 Elpi Accumulate derive lp:{{
 func derive.on_param1 gref, (func gref, gref, string -> list prop), string -> list prop.
-derive.on_param1 GR F N C :- reali {coq.env.global GR} {coq.env.global P}, !, F GR P N C.
+derive.on_param1 GR F N C :- reali.gref GR P, !, F GR P N C.
 
 derivation T N ff (derive "param1" (derive.param1.main T N ) (reali-done T)).
 

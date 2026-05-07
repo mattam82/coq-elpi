@@ -290,11 +290,10 @@ val nameout : RawOpaqueData.t -> Name.t
 val name : Name.t Conversion.t
 
 type global_or_pglobal =
-  | Global of term option
   | PGlobal of term option * UVars.Instance.t option
   | NotGlobal
   | Var
-val is_global_or_pglobal : depth:int -> state -> term -> global_or_pglobal
+val is_global_or_pglobal : depth:int -> state -> term -> state * global_or_pglobal * Conversion.extra_goals
 
 val in_elpi_modpath : ty:bool -> Names.ModPath.t -> term
 val is_modpath : depth:int -> term -> bool

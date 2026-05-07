@@ -140,12 +140,12 @@ Elpi Query lp:{{
   std.assert! (D =
     parameter "A" explicit (sort (typ _)) c0 \
      inductive "t" tt 
-       (parameter "y" explicit (global (indt _)) c1 \
+       (parameter "y" explicit (pglobal (indt _) _) c1 \
 	        arity (sort (typ _))) c1 \
       [constructor "K" 
-        (parameter "y" explicit (global (indt _)) c2 \
+        (parameter "y" explicit (pglobal (indt _) _) c2 \
           parameter "x" explicit c0 c3 \
-          parameter "n" maximal (global (indt _)) c4 \
+          parameter "n" maximal (pglobal (indt _) _) c4 \
             arity (prod `_` (app [c1, c4]) c5 \ app [c1, c2]))]) "wrong HOAS nup".
 }}.
 
@@ -268,7 +268,7 @@ Elpi Query lp:{{
     record "r" (sort (typ _)) "R"
      (field [coercion reversible,canonical tt] "f" (prod `_` c0 _\ c0) c2\
       field [coercion off,canonical tt] "g" c0 c3\
-      field [coercion off,canonical tt] "p" (app [global (indt _), c0, c1, c3]) _\
+      field [coercion off,canonical tt] "p" (app [pglobal (indt _) _, c0, c1, c3]) _\
       end-record)) "not a record",
   coq.env.add-indt R _.
 }}.
@@ -284,7 +284,7 @@ Elpi declarations #[universes(template=no)] Inductive X1 : Type := .
 Fail Elpi declarations #[universes(template)] Inductive X2 : Type := .
 About X1.
 
-Fail Elpi Query lp:{{ coq.locate "X1" GR, coq.env.global GR (pglobal GR _) }}.
+Elpi Query lp:{{ coq.locate "X1" GR, coq.env.global GR (pglobal GR _) }}.
 
 (*****************************************)
 
@@ -320,6 +320,7 @@ About f3.
 Elpi raw_declarations #[universes(polymorphic)] Definition f4@{u} (T:Type@{u}) (T1:Type@{u}) (x:T) := x.
 About f4.
 
+Unset Universe Polymorphism.
 Universe uuu.
 
 Elpi raw_declarations Definition f5 (T:Type@{uuu}) (T1:Type@{uuu}) (x:T) := x.

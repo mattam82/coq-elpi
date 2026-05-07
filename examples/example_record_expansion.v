@@ -161,11 +161,11 @@ expand-spine (info _ GR NGR _ _ _) X Y AccL AccR Premises Clause :-
   % we build "app[f,x1..xn|rest]"
   coq.env.global GR (pglobal GR GRI),
   (pi rest1\ coq.mk-app (pglobal GR GRI) {std.append {std.rev AccL} rest1} (L rest1)),
-  (pi rest2\ coq.mk-app (pglobal NGR GRI) {std.append {std.rev AccR} rest2} (R rest2)),
+  (pi ngri\ pi rest2\ coq.mk-app (pglobal NGR ngri) {std.append {std.rev AccR} rest2} (R ngri rest2)),
   % we can now build the clause "expand (app[f,L1..Ln|Rest1]) (app[f1,R1..Rn|Rest2])"
   % here we quantify only the tails, the other variables were quantified during
   % expand-*
-  Clause = (pi rest1 rest2\ expand (L rest1) (R rest2) :- [!, std.map rest1 expand rest2 | Premises]).
+  Clause = (pi ngri rest1 rest2\ expand (L rest1) (R ngri rest2) :- [!, std.map rest1 expand rest2 | Premises]).
 
 % The entry point of the main algorithm, just fetchs some data and passes initial
 % values for the accumulators.

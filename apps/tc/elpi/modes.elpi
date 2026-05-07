@@ -127,7 +127,6 @@ namespace tc {
     ].
 
   func modes-check term ->.
-  modes-check (global _).
   modes-check (pglobal _ _).
   modes-check (app [ClassTerm | Args]) :-
     tc.class-gref ClassTerm ClassGR,

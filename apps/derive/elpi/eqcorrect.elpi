@@ -18,20 +18,23 @@ pointfree F A B R :-
   coq.mk-app HDB BB RIGHT, !,
   if (LEFT = RIGHT) (R = {{ fun _ x => x }}) (F LEFT RIGHT R).
 
-param1-functor-db {{ lib:elpi.derive.eq_axiom_at lp:A lp:F }}
-       {{ lib:elpi.derive.eq_axiom_at lp:_ lp:F }}
-       {{ fun (x : lp:A) (px : lib:elpi.derive.eq_axiom_at lp:A lp:F x) => px }} :- !.
+param1-functor-db HypTy HypTy2 R :- 
+  coq.safe-dest-app HypTy (pglobal {{:gref lib:elpi.derive.eq_axiom_at}} _) [A, F],
+  coq.safe-dest-app HypTy2 (pglobal {{:gref lib:elpi.derive.eq_axiom_at}} _) [_, _],
+  !, 
+  R = {{ fun (x : lp:A) (px : lib:elpi.derive.eq_axiom_at lp:A lp:F x) => px }}.
 
-param1-functor-db HypTy {{ lib:elpi.derive.eq_axiom_at lp:A lp:_ }}
+param1-functor-db HypTy HypTy2
              {{ fun (x : lp:A) (px : lp:(PA x)) => lp:(R x px) }} :-
   (pi x\ coq.mk-app HypTy [x] (PA x)),
 
-  coq.safe-dest-app HypTy (pglobal (indt KR) Ui) Args,
-  reali.ref KGR (indt KR), !,
-
+  coq.safe-dest-app HypTy KR Args,
+  realiR (pglobal KGR _) KR, 
+  coq.safe-dest-app HypTy2 (pglobal {{:gref lib:elpi.derive.eq_axiom_at}} _) [A, _],
+  !,
   Msg is "derive.eqcorrect: no eqcorrect for " ^ {coq.gref->string KGR},
-  assert! (eqcorrect-db KGR OK) Msg,
-  coq.env.global OK OKT,
+  assert! (eqcorrect-db KGR OKGR) Msg,
+  coq.env.global OKGR OKT,
   (derive.eqcorrect.mk-app-eqfun OKT Args OKLemma),
 
   coq.typecheck OKLemma OKLemmaTy ok,

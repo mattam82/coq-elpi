@@ -9,6 +9,31 @@ Import test_param1_functor.Coverage.
 Import test_induction.Coverage.
 Import test_eqK.Coverage.
 
+About id.
+
+Elpi Db mydb lp:{{
+  type mydb term -> prop.
+}}.
+Elpi Command foo.
+Elpi Accumulate Db mydb.
+
+About id.
+About nat.
+Elpi Query lp:{{
+
+coq.env.global {{:gref id }} X,
+coq.mk-app X [pglobal {{:gref nat }} []] Y,
+coq.say Y,
+coq.elpi.accumulate _ "mydb" (clause _ _ (mydb Y)).
+
+}}.
+Elpi Query lp:{{
+   mydb X
+}}.
+
+
+
+
 Module Coverage.
 Elpi derive.eqcorrect empty.
 Elpi derive.eqcorrect unit.

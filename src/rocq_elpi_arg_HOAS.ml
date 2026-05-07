@@ -972,7 +972,7 @@ let ginductive2lp_synterp ~depth state { Cmd.finiteness; name; arity; params; nu
     let state, constructors = Rocq_elpi_utils.list_map_acc (do_constructor ~depth ) state constructors in
     state, in_elpi_indtdecl_inductive state finiteness (Name.Name qindt_name) arity constructors
   in
-  Feedback.msg_debug Pp.(str"ginductive2lp_synterp, univpoly = " ++ PolyFlags.pr univpoly);
+  (* Feedback.msg_debug Pp.(str"ginductive2lp_synterp, univpoly = " ++ PolyFlags.pr univpoly); *)
   let state, r = gindparams2lp_synterp params (do_inductive_synterp ~depth) ~depth state in
   mk_indt_decl state univpoly NotUniversePolymorphic r
 

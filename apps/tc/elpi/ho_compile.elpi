@@ -17,7 +17,6 @@ namespace tc {
         func decompile-term-aux term, pair (list term) (list prop) -> term, pair (list term) (list prop).
 
         decompile-term-aux X A Y A :- name X, !, X = Y, !. % avoid loading "decompile-term-aux x A x A" at binders
-        decompile-term-aux (global _ as C) A C A :- !.
         decompile-term-aux (pglobal _ _ as T) L T' L :- !, copy T T', !.
         decompile-term-aux (sort _ as T) L T' L :- !, copy T T', !.
         decompile-term-aux (uvar as X) L X L :- !.
@@ -313,12 +312,13 @@ namespace tc {
 
     func instance-gr gref -> prop.
     % If the instance is polymorphic, we wrap its gref into the pglobal constructor
-    instance-gr InstGR (pi x\ Clause x) :- coq.env.univpoly? InstGR _, !,
+    instance-gr InstGR Clause :-
+      coq.env.univpoly? InstGR 0, !,
+      coq.env.typeof InstGR Ty,
+      tc.compile.instance Ty (pglobal InstGR []) Clause.
+    instance-gr InstGR (pi x\ Clause x) :- !,
       coq.env.typeof InstGR Ty,
       pi x\ tc.compile.instance Ty (pglobal InstGR x) (Clause x).
-    instance-gr InstGR Clause :-
-      coq.env.typeof InstGR Ty,
-      tc.compile.instance Ty (global InstGR) Clause.
     
     namespace goal {
       % [uvar-pair V1 Ty V2] List of uvar for link-eta-dedup

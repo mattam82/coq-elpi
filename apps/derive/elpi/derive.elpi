@@ -42,13 +42,16 @@ chain T [derive Name _ AlreadyDone|FS] CL :- ((pi x\ stop x :- !, fail) ==> Alre
   chain T FS CL.
 chain T [derive Name F _|FS] CL :- get-option "only" _, !, % request this one
   if-verbose (coq.say "Derivation" Name "on" T),
-  (@dropunivs! ==> std.time (F C) Time),
+  % (@dropunivs! ==> std.time (F C) Time),
+  std.time (F C) Time,
   if-verbose (coq.say "Derivation" Name "on" T "took" Time),
   (C ==> chain T FS CS),
   std.append C CS CL.
 chain T [derive Name F _|FS] CL :- % all are selected, we can fail
   if-verbose (coq.say "Derivation" Name "on" T),
-  ((pi x\ stop x :- !, fail) ==> @dropunivs! ==> std.time (F C) Time), !,
+  ((pi x\ stop x :- !, fail) ==> 
+    %  @dropunivs! ==> 
+     std.time (F C) Time), !,
   if-verbose (coq.say "Derivation" Name "on" T "took" Time),
   (C ==> chain T FS CS),
   std.append C CS CL.
@@ -162,9 +165,9 @@ decl+main.post TypeName I DS CL :- std.do! [
   coq.env.indt I _ _ _ _ KS _,
   std.map KS (k\r\ r = indc k) KGRS,
   std.map KGRS coq.gref->id KNS,
-  std.map KGRS (gr\r\ r = @global gr) KTS,
+  std.map KGRS (gr\r\ coq.env.global gr r) KTS,
 
-  std.forall2 [TypeName|KNS] [@global (indt I)|KTS] short-alias,
+  std.forall2 [TypeName|KNS] [{coq.env.global (indt I)}|KTS] short-alias,
 
   coq.indt-decl->implicits DS IndImpls KsImpls,
   if (coq.any-implicit? IndImpls)
