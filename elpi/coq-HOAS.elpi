@@ -23,7 +23,8 @@ external symbol tac : ltac1-tactic -> argument.
 % Types of term formers
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-typeabbrev univ-instance (list univ).
+typeabbrev univ-instance (pair (list quality) (list univ)).
+macro @empty-univ-instance :- pr [] [].
 
 % -- terms --------------------------------------------------------------------
 kind term type.

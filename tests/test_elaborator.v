@@ -20,13 +20,12 @@ Elpi Query lp:{{
   of B TY RB.
 }}.
 
-About eq.
 Elpi Debug "DBG:of".
-Elpi Query lp:{{
-  {{plus_n_O}} = pglobal (const GR) [], (@uinstance! [] => coq.env.const-body GR (some B)),
+(* Elpi Query lp:{{
+  {{plus_n_O}} = pglobal (const GR) @empty-univ-instance, coq.env.const-body GR (some B),
   of B TY RB
 }}.
-
+ *)
 (* -------------------------------------------------------------*)
 (* tests with implicit arguments *)
 
