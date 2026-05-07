@@ -174,8 +174,8 @@ namespace tc {
   % [section-var->decl.aux L R] auxiliary function for `section-var->decl`
   func section-var->decl.aux list constant -> list prop.
   section-var->decl.aux [] [].
-  section-var->decl.aux [X|XS] [(decl (@global (const X)) _ Ty)|YS] :-
-    coq.env.typeof (const X) Ty,
+  section-var->decl.aux [X|XS] [(decl (pglobal (const X) Ui) _ Ty)|YS] :-
+    @uinstance! Ui ==> coq.env.typeof (const X) Ty,
     section-var->decl.aux XS YS.
 
   % [section-var->decl L] decl representing seciton variables with their types

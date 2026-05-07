@@ -20,8 +20,10 @@ Elpi Query lp:{{
   of B TY RB.
 }}.
 
+About eq.
+Elpi Debug "DBG:of".
 Elpi Query lp:{{
-  {{plus_n_O}} = global (const GR), coq.env.const-body GR (some B),
+  {{plus_n_O}} = pglobal (const GR) [], (@uinstance! [] => coq.env.const-body GR (some B)),
   of B TY RB
 }}.
 
@@ -96,7 +98,7 @@ get-option "unif:greedy" tt => (
 (* -------------------------------------------------------------*)
 (* tests with coercions *)
 
-Elpi Query lp:{{ {{bool}} = global (indt GR), coq.env.indt GR A B C D E F }}.
+Elpi Query lp:{{ {{bool}} = @global (indt GR), coq.env.indt GR A B C D E F }}.
 
 Axiom nat_of_bool : bool -> nat.
 
