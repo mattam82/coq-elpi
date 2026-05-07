@@ -100,6 +100,18 @@ let um = S.declare_component ~name:"rocq-elpi:evar-univ-map" ~descriptor:interp_
   ~pp:UM.pp ~init:(fun () -> UM.empty) ~start:(fun x -> x) ()
 
 
+
+(* map from Elpi evars to Qualities *)
+module QM = F.Map(struct
+  type t = Sorts.Quality.t
+  let compare = Sorts.Quality.compare
+  let show x = Pp.string_of_ppcmds @@ Sorts.Quality.raw_pr x
+  let pp fmt x = Format.fprintf fmt "%a" Pp.pp_with (Sorts.Quality.raw_pr x)
+end)
+
+let qm = S.declare_component ~name:"rocq-elpi:evar-quality-map" ~descriptor:interp_state
+  ~pp:QM.pp ~init:(fun () -> QM.empty) ~start:(fun x -> x) ()
+
 let constraint_leq u1 u2 =
   let open UnivProblem in
   ULe (u1, u2)
@@ -175,6 +187,12 @@ let add_universe_constraint state c =
       raise API.BuiltInPredicate.No_clause
 [%%endif]
 
+let new_quality_variable state =
+  S.update_return (Option.get !pre_engine) state (fun ({ sigma } as e) ->
+    (* ~name: really mean the universe level is a binder as in Definition f@{x} *)
+    let sigma, q = Evd.new_quality_variable ?name:None sigma in
+    { e with sigma }, Sorts.Quality.QVar q)
+
 let new_univ_level_variable ?(flexible=true) state =
   S.update_return (Option.get !pre_engine) state (fun ({ sigma } as e) ->
     (* ~name: really mean the universe level is a binder as in Definition f@{x} *)
@@ -187,7 +205,49 @@ let new_univ_level_variable ?(flexible=true) state =
 *)
     { e with sigma }, (v, u))
 
+(* 
+
+  type constant = QProp | QSProp | QType
+  type t = QVar of QVar.t | QConstant of constant | QGlobal of QGlobal.t
+*)
+
+(* We patch data_of_cdata by forcing all output qualities that
+ * are unification variables to be a Roccq quality variable, so that
+ * we can always call Rocq's API *)
+let isquality, qualityout, qualityino, (quality : Sorts.Quality.t API.Conversion.t) =
+  let { CD.cin = qualityin; cino = qualityino; isc = isquality; cout = qualityout }, quality_to_be_patched = CD.declare {
+    CD.name = "quality";
+    doc = "sort quality";
+    pp = (fun fmt x ->
+      let s = Pp.string_of_ppcmds (Sorts.Quality.raw_pr x) in
+      Format.fprintf fmt "«%s»" s);
+    compare = Sorts.Quality.compare;
+    hash = Sorts.Quality.hash;
+    hconsed = false;
+    constants = [];
+  } in
+  (* turn UVars into fresh qualities *)
+  isquality, qualityout, qualityino, { quality_to_be_patched with
+  API.Conversion.readback = begin fun ~depth state t ->
+    match E.look ~depth t with
+    | E.UnifVar (b,args) ->
+       let m = S.get qm state in
+       begin try
+         let u = QM.host b m in
+         state, u, []
+       with Not_found ->
+         (* flexible makes {{ Type }} = {{ Set }} also true when coq.unify-eq {{ Type }} {{ Set }} *)
+         let state, q = new_quality_variable state in
+         let state = S.update qm state (QM.add b q) in
+         let state, b' = API.FlexibleData.Elpi.make state in
+         let qvar_pruned = E.mkUnifVar b' ~args:[] state in
+         state, q, [ API.Conversion.Unify (t, qvar_pruned); API.Conversion.Unify(qvar_pruned,qualityin q) ]
+       end
+    | _ -> quality_to_be_patched.API.Conversion.readback ~depth state t
+  end
+}
     
+
 (* We patch data_of_cdata by forcing all output universes that
  * are unification variables to be a Coq universe variable, so that
  * we can always call Coq's API *)
@@ -707,16 +767,18 @@ let ppinst u = UVars.Instance.pr Sorts.QVar.raw_pr UnivNames.pr_level_with_globa
 let ppinst u = UVars.Instance.pr Sorts.raw_printer u
 [%%endif]
 
-let uinstance = API.BuiltInData.list univ
+let uinstance = Elpi.Builtin.pair (API.BuiltInData.list quality) (API.BuiltInData.list univ)
 
 let uinstance_to_list i =
   let qvars, uvars = UVars.Instance.to_array i in
-  let i = Array.to_list uvars in
-  i
+  let qs = Array.to_list qvars in 
+  let us = Array.to_list uvars in
+  qs, us
 
-let uinstance_of_list i =
-  let uvars = Array.of_list i in
-  UVars.Instance.of_array ([||], uvars)
+let uinstance_of_list (qs, us) =
+  let qs = Array.of_list qs in
+  let us = Array.of_list us in
+  UVars.Instance.of_array (qs, us)
 
 let uinstancein ~depth state i =
   let i = uinstance_to_list i in
@@ -728,11 +790,18 @@ let uinstanceout ~depth state i =
   let state, i, gls = uinstance.API.Conversion.readback ~depth state i in
   state, uinstance_of_list i, gls
 
+let prc  = E.Constants.declare_global_symbol "pr"
+
 let uinstanceina ~loc x =
-  let _qvars, uvars = UVars.Instance.to_array x in
-  let l = Array.to_list uvars in
-  let l = List.map (fun u -> A.mkOpaque ~loc @@ univino u) l in
-  A.list_to_lp_list ~loc l
+  let qs, us = UVars.Instance.to_array x in
+  let qs = Array.to_list qs in
+  let qs = List.map (fun u -> A.mkOpaque ~loc @@ qualityino u) qs in
+  let qs = A.list_to_lp_list ~loc qs in
+  let us = Array.to_list us in
+  let us = List.map (fun u -> A.mkOpaque ~loc @@ univino u) us in
+  let us = A.list_to_lp_list ~loc us in
+  A.mkAppGlobal ~loc ~hdloc:loc prc qs [us]
+
 (*  
 let uinstancein, uinstanceino, isuinstance, uinstanceout, uinstance =
   let { CD.cin; cino; isc; cout }, uinstance = CD.declare {

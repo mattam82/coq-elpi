@@ -209,7 +209,8 @@ external symbol tac : ltac1-tactic -> argument.
 % Types of term formers
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-typeabbrev univ-instance (list univ).
+typeabbrev univ-instance (pair (list quality) (list univ)).
+macro @empty-univ-instance :- pr [] [].
 
 % -- terms --------------------------------------------------------------------
 kind term type.
@@ -668,7 +669,7 @@ external func coq.locate id -> gref.
 external func coq.env.typeof gref -> term.
 
 
-macro @global GR :- pglobal GR [].
+macro @global GR :- pglobal GR @empty-univ-instance.
 
 
 % [coq.env.global GR T] turns a global reference GR into a term, or
@@ -859,7 +860,8 @@ external func coq.env.current-section-path -> list string.
 % store after the definition)
 % 
 external func coq.env.add-const-uinst id, term, term, 
-                                     opaque? -> constant, list univ.
+                                     opaque? -> constant, 
+                                     pair (list quality) (list univ).
 
 
 func coq.env.add-const id, term, term, opaque? -> constant.
@@ -878,7 +880,8 @@ coq.env.add-const ID Bo Ty Opaque C :- coq.env.add-const-uinst ID Bo Ty Opaque C
 % - @using! (default: section variables actually used)
 % - @inline! (default: no inlining)
 % - @inline-at! N (default: no inlining)
-external func coq.env.add-axiom-uinst id, term -> constant, list univ.
+external func coq.env.add-axiom-uinst id, term -> constant, 
+                                     pair (list quality) (list univ).
 
 
 func coq.env.add-axiom id, term -> constant.
@@ -908,7 +911,8 @@ coq.env.add-context (context-item Name _I Ty (some Bo) Rest) :-
 % - @dropunivs! (default: false, drops all universe constraints from the
 % store after the definition)
 % - @primitive! (default: false, makes records primitive)
-external func coq.env.add-indt-uinst indt-decl -> inductive, list univ.
+external func coq.env.add-indt-uinst indt-decl -> inductive, 
+                                    pair (list quality) (list univ).
 
 
 func coq.env.add-indt indt-decl -> inductive.
@@ -1056,6 +1060,10 @@ external func coq.env.primitive-projection? -> projection, constant, int.
 % able to handle algebraic universes consistently, making this purging
 % phase unnecessary.
 
+% sort quality
+kind quality type.
+
+
 % universe level (algebraic: max, +1, univ.variable)
 kind univ type.
 
@@ -1123,7 +1131,7 @@ external func coq.univ.variable.of-term term -> coq.univ.variable.set.
 
 % A universe polymorphic constant can be instantiated with universes.
 % 
-% A univ-instance is simply a list of universes.
+% A univ-instance is simply a list of sorts and universe levels.
 % 
 % Most of the time the user is expected to use coq.env.global which
 % crafts a fresh, appropriate, universe instance and possibly unify that
@@ -1131,15 +1139,17 @@ external func coq.univ.variable.of-term term -> coq.univ.variable.set.
 
 % [coq.univ-instance.unify-eq GR UI1 UI2 Diagnostic] unifies the two
 % universe instances for the same gref
-external func coq.univ-instance.unify-eq gref, list univ, 
-                                        list univ -> diagnostic.
+external func coq.univ-instance.unify-eq gref, 
+                                        pair (list quality) (list univ), 
+                                        pair (list quality) (list univ) -> diagnostic.
 
 % [coq.univ-instance.unify-leq GR UI1 UI2 Diagnostic] unifies the two
 % universe instances for the same gref. Note: if the GR is not *cumulative*
 % (see Cumulative or #[universes(cumulative)]) then this API imposes an
 % equality constraint.
-external func coq.univ-instance.unify-leq gref, list univ, 
-                                         list univ -> diagnostic.
+external func coq.univ-instance.unify-leq gref, 
+                                         pair (list quality) (list univ), 
+                                         pair (list quality) (list univ) -> diagnostic.
 
 % -- Declaration of universe polymorphic global terms -----------
 

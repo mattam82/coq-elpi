@@ -273,7 +273,7 @@ of (match T Rty Bs) ResRtyInst (match ResT ResRty ResBs) :-
   of T TyT ResT,
   % T : TyT = (indt GR) LArgs RArgs, and (indt GR) : Ty
   coq.safe-dest-app TyT (pglobal (indt GR) Uinst) Args,
-  coq.env.indt GR _IsInd Lno _Luno Ty Kn Ks, % TODO LUno
+  (@uinstance! Uinst ==> coq.env.indt GR _IsInd Lno _Luno Ty Kn Ks), % TODO LUno
   split-at Lno Args LArgs RArgs, % TODO: not a failure, just type err
   % fix LArgs on ind ty and constructors ty
   coq.subst-prod LArgs Ty TyLArgs,

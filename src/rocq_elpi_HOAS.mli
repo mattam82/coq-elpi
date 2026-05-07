@@ -268,17 +268,21 @@ val compute_with_uinstance :
     state * 'c * UVars.Instance.t option * Conversion.extra_goals
 
 (* CData relevant for other modules, e.g the one exposing Coq's API *)
+val quality : Sorts.Quality.t Conversion.t
+val isquality : RawOpaqueData.t -> bool
+val qualityout : RawOpaqueData.t -> Sorts.Quality.t
+
 val universe_level_variable : Univ.Level.t Conversion.t
 val univ : Univ.Universe.t Conversion.t
 val isuniv : RawOpaqueData.t -> bool
 val univout : RawOpaqueData.t -> Univ.Universe.t
 
-val uinstance : Univ.Universe.t list Conversion.t
+val uinstance : (Sorts.Quality.t list * Univ.Universe.t list) Conversion.t
 (* val isuinstance : RawOpaqueData.t -> bool *)
 val uinstancein : depth:int -> state -> UVars.Instance.t -> state * term
 val uinstanceout : depth:int -> state -> term -> state * UVars.Instance.t * Conversion.extra_goals
-val uinstance_to_list : UVars.Instance.t -> Univ.Universe.t list
-val uinstance_of_list : Univ.Universe.t list -> UVars.Instance.t
+val uinstance_to_list : UVars.Instance.t -> (Sorts.Quality.t list * Univ.Universe.t list)
+val uinstance_of_list : (Sorts.Quality.t list * Univ.Universe.t list) -> UVars.Instance.t
 
 val is_sort : depth:int -> term -> bool
 val is_prod : depth:int -> term -> (term * term) option (* ty, bo @ depth+1 *)

@@ -2055,7 +2055,7 @@ T = (pglobal GR [])"|}))),
     state, !: t, [])), DocAbove); *)
 
   LPCode {|
-macro @global GR :- pglobal GR [].
+macro @global GR :- pglobal GR @empty-univ-instance.
 |};
 
   MLCode(Pred("coq.env.global",
@@ -2991,6 +2991,7 @@ makes the embedding of terms less precise than what it could be.
 The different data types stay, since Coq will eventually become
 able to handle algebraic universes consistently, making this purging
 phase unnecessary.|};
+  MLData quality;
   MLData univ;
   MLDataC sort;
 
@@ -3165,7 +3166,7 @@ phase unnecessary.|};
 
   LPDoc {|A universe polymorphic constant can be instantiated with universes.
 
-A univ-instance is simply a list of universes.
+A univ-instance is simply a list of sorts and universe levels.
 
 Most of the time the user is expected to use coq.env.global which
 crafts a fresh, appropriate, universe instance and possibly unify that
