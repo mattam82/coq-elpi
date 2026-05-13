@@ -5,8 +5,8 @@ Section test_max_arity.
     T = (c1\ prod `c` _ c2 \
       prod `_` 
         (prod `a` _ c3 \
-          app [global _, app [c1, c3], c2]) c3 \
-        app [global _, c1, c2]),
+          app [pglobal _ _, app [c1, c3], c2]) c3 \
+        app [pglobal _ _, c1, c2]),
     pi x\ tc.precomp.instance.get-range-arity x _ (T x) (tc.r-ar z (s z)).
   }}.
 End test_max_arity.
