@@ -743,33 +743,30 @@ let err_if_contains_alg_univ ~depth t =
   let is_global u =
     let levels = Univ.Universe.levels u in
     is_global_levels env levels in
-  let rec aux ~depth acc t =
+  let rec aux ~depth (accu,acci as acc) t =
     match E.look ~depth t with
     | E.CData c when isuniv c ->
         let u = univout c in
         if is_global u then acc
         else
-          Univ.Universe.Set.add u acc
-(* 
-          begin match Univ.Universe.level u with
-          | None ->
-            err Pp.(strbrk "The hypothetical clause contains terms of type univ which are not global, you should abstract them out or replace them by global ones: " ++
-              Univ.Universe.pr UnivNames.pr_level_with_global_universes u)
-          | _ -> Univ.Universe.Set.add u acc, acci
-          end *)
+          (Univ.Universe.Set.add u accu, acci)
+    | E.CData c when isuinstance c ->
+        (accu, acci + 1)
     | x -> Rocq_elpi_utils.fold_elpi_term aux acc ~depth x
   in
-  let univs = aux ~depth Univ.Universe.Set.empty t in
+  let univs = aux ~depth (Univ.Universe.Set.empty,0) t in
   univs
 
 let preprocess_clause ~depth clause =
-  let levels_to_abstract = err_if_contains_alg_univ ~depth clause in
+  let levels_to_abstract, instances_to_abstract = err_if_contains_alg_univ ~depth clause in
   let levels_to_abstract_no = Univ.Universe.Set.cardinal levels_to_abstract in
   let rec subst ~depth m mi t =
     match E.look ~depth t with
     | E.CData c when isuniv c ->
         begin try E.mkBound (Univ.Universe.Map.find (univout c) m)
         with Not_found -> t end
+    | E.CData c when isuinstance c ->
+       decr mi; E.mkBound !mi
     | E.App(c,x,xs) ->
         E.mkApp c (subst ~depth m mi x) (List.map (subst ~depth m mi) xs)
     | E.Cons(x,xs) ->
@@ -785,7 +782,7 @@ let preprocess_clause ~depth clause =
     let rec bind d map mapi = function
      | [] ->
          subst ~depth:d map mapi
-           (API.Utils.move ~from:depth ~to_:(depth + levels_to_abstract_no + !mapi) clause)
+           (API.Utils.move ~from:depth ~to_:(depth + levels_to_abstract_no + instances_to_abstract) clause)
      | l :: ls ->
        E.mkBuiltin E.Pi [E.mkLam (*   pi x\  *)
            (bind (d+1) (Univ.Universe.Map.add l d map) mapi ls)]
@@ -796,11 +793,11 @@ let preprocess_clause ~depth clause =
         E.mkBuiltin E.Pi [E.mkLam (*   pi x\  *)
             (bindi (d+1) map mapi ua (n-1))]
      in
-       bindi depth Univ.Universe.Map.empty (ref (depth))
-         (Univ.Universe.Set.elements levels_to_abstract) 0
+       bindi depth Univ.Universe.Map.empty (ref (depth+instances_to_abstract))
+         (Univ.Universe.Set.elements levels_to_abstract) instances_to_abstract
   in
   let vars = collect_term_variables ~depth clause' in
-  (* Feedback.msg_debug Pp.(str " accumulating clause : " ++ str(pp2string (P.term depth) clause') ++ str" from " ++ str(pp2string (P.term depth) clause)); *)
+  Feedback.msg_debug Pp.(str " accumulating clause : " ++ str(pp2string (P.term depth) clause') ++ str" from " ++ str(pp2string (P.term depth) clause));
   vars, clause'
 
 let argument_mode = let open Conv in let open API.AlgebraicData in declare {
