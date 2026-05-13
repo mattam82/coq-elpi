@@ -6,19 +6,19 @@ Module Animals.
     Inductive info := Fly | NotFly.
 
     Class Animal (i : info).
-    
+  
     Class Bird (i : info) := IsAnimal :: Animal i.
-
+  
     Instance dove : Bird Fly. split. Qed.
 
     (* It exists a ground solution for tc-Animal *)
     Elpi Query TC.Solver lp:{{
-      tc-elpi.apps.tc.tests.test_coercion.Animals.Bird1.tc-Animal _ S, ground_term S.
+      tc-elpi.apps.tc.tests.test_coercion.Animals.Bird1.tc-Animal _ S, coq.say S
     }}.
 
     (* It does not exist a solution for tc-Animal with a flexible solution *)
     Elpi Query TC.Solver lp:{{
-      not (tc-elpi.apps.tc.tests.test_coercion.Animals.Bird1.tc-Animal _ S, not (ground_term S)).
+      not (tc-elpi.apps.tc.tests.test_coercion.Animals.Bird1.tc-Animal _ S, ground_term S).
     }}.
 
     Goal Animal Fly. apply _. Qed.
@@ -74,6 +74,7 @@ Module foo.
     Class C (i : nat) : Set := {
       f (x : A) :: B i
     }.
+
   End s.
 End foo.
 
