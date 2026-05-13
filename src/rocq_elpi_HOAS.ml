@@ -768,7 +768,7 @@ let ppinst u = UVars.Instance.pr Sorts.QVar.raw_pr UnivNames.pr_level_with_globa
 [%%else]
 let ppinst u = UVars.Instance.pr Sorts.raw_printer u
 [%%endif]
-
+(* 
 let uinstance = Elpi.Builtin.pair (API.BuiltInData.list quality) (API.BuiltInData.list univ)
 
 let uinstance_to_list i =
@@ -803,8 +803,8 @@ let uinstanceina ~loc x =
   let us = List.map (fun u -> A.mkOpaque ~loc @@ univino u) us in
   let us = A.list_to_lp_list ~loc us in
   A.mkAppGlobal ~loc ~hdloc:loc prc qs [us]
+ *)
 
-(*  
 let uinstancein, uinstanceino, isuinstance, uinstanceout, uinstance =
   let { CD.cin; cino; isc; cout }, uinstance = CD.declare {
     CD.name = "univ-instance";
@@ -818,7 +818,8 @@ let uinstancein, uinstanceino, isuinstance, uinstanceout, uinstance =
     constants = [];
   } in
   cin, cino, isc, cout, uinstance
-;;  *)
+;; 
+let uinstanceina ~loc x = A.mkOpaque ~loc (uinstanceino x)
 
 let collect_term_variables ~depth t =
   let rec aux ~depth acc t =
@@ -934,7 +935,7 @@ let in_elpi_poly_gr ~depth s r i =
   let open API.Conversion in
   let s, t, gl = gref.embed ~depth s r in
   assert (gl = []);
-  let s, i = uinstancein ~depth s i in
+  let i = uinstancein i in
   E.mkApp pglobalc t [i]
 
 let in_elpiast_poly_gr ~loc r i =
@@ -1607,7 +1608,7 @@ let get_options ~depth hyps state =
       match E.look ~depth t with
       | E.UnifVar (head, args) -> VarInstance (head, args, depth)
       | _ ->
-        let state, i, gls = uinstanceout ~depth state t in
+        let state, i, gls =  uinstance.Elpi.API.Conversion.readback ~depth state t in
         assert (gls = []);
         ConcreteInstance i
     end
@@ -2241,7 +2242,7 @@ let in_coq_poly_gref ~depth ~origin ~failsafe s t i =
           | _ -> assert false
         in
         let s = S.update uim s (UIM.add b u) in
-        let s, ue = uinstancein ~depth s u in
+        let ue = uinstancein u in
         let s, b' = API.FlexibleData.Elpi.make s in
         let uvar_pruned = E.mkUnifVar b' ~args:[] s in
         (* Feedback.msg_debug Pp.(str"Creating unif var " ++ str (pp2string (P.term depth) uvar_pruned) ++ str " from " ++ str(pp2string (P.term depth) i) ++ str " for " ++ 
@@ -2249,7 +2250,7 @@ let in_coq_poly_gref ~depth ~origin ~failsafe s t i =
         s, u, [API.Conversion.Unify (i, uvar_pruned); API.Conversion.Unify (uvar_pruned,ue)]
       end
     | _ ->
-      let s, ri, gls = uinstanceout ~depth s i in
+      let s, ri, gls = uinstance.Elpi.API.Conversion.readback ~depth s i in
       let sigma = get_sigma s in
       let eri = EConstr.EInstance.make ri in
       s, EConstr.EInstance.kind sigma eri, gls
@@ -2285,7 +2286,7 @@ let is_global_or_pglobal ~depth state t =
     match E.look ~depth x with
     | E.UnifVar _ -> state, None, []
     | _ -> 
-      let state, i, gls = uinstanceout ~depth state x in
+      let state, i, gls = uinstance.Elpi.API.Conversion.readback ~depth state x in
       state, Some i, gls
   in
   match E.look ~depth t with
@@ -3823,9 +3824,8 @@ let compute_with_uinstance ~depth options state f x inst_opt =
       let uvar = (E.mkUnifVar v_head ~args:v_args state) in
       Feedback.msg_debug Pp.(str "making unif variable in compute_with_uinstance: " ++ str (API.RawPp.Debug.show_term uvar));
       let v' = U.move ~from:v_depth ~to_:depth uvar in
-      let state, lp_uinst = uinstancein ~depth state uinst in
-      state, r, Some uinst, [API.Conversion.Unify (v', lp_uinst)]
-    
+      let state, lp_uinst, extra_goals = uinstance.API.Conversion.embed ~depth state uinst in
+      state, r, Some uinst, API.Conversion.Unify (v', lp_uinst) :: extra_goals    
 
 let embed_arity ~depth coq_ctx state (relctx,ty) =
   let calldepth = depth in

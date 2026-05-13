@@ -277,12 +277,16 @@ val univ : Univ.Universe.t Conversion.t
 val isuniv : RawOpaqueData.t -> bool
 val univout : RawOpaqueData.t -> Univ.Universe.t
 
-val uinstance : (Sorts.Quality.t list * Univ.Universe.t list) Conversion.t
+val uinstance : UVars.Instance.t Conversion.t
+val isuinstance : RawOpaqueData.t -> bool
+val uinstanceout : RawOpaqueData.t -> UVars.Instance.t
+
+(* val uinstance : (Sorts.Quality.t list * Univ.Universe.t list) Conversion.t
 (* val isuinstance : RawOpaqueData.t -> bool *)
 val uinstancein : depth:int -> state -> UVars.Instance.t -> state * term
 val uinstanceout : depth:int -> state -> term -> state * UVars.Instance.t * Conversion.extra_goals
 val uinstance_to_list : UVars.Instance.t -> (Sorts.Quality.t list * Univ.Universe.t list)
-val uinstance_of_list : (Sorts.Quality.t list * Univ.Universe.t list) -> UVars.Instance.t
+val uinstance_of_list : (Sorts.Quality.t list * Univ.Universe.t list) -> UVars.Instance.t *)
 
 val is_sort : depth:int -> term -> bool
 val is_prod : depth:int -> term -> (term * term) option (* ty, bo @ depth+1 *)

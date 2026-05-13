@@ -492,9 +492,9 @@ let handle_uinst_option_for_inductive ~depth options i state =
       let term, ctx =
         UnivGen.fresh_global_instance (get_global_env state) (GlobRef.IndRef i) in
       let uinst = snd @@ Constr.destInd term in
-      let state, lp_uinst = uinstancein ~depth state uinst in
+      let state, lp_uinst, extra_goals = uinstance.Conv.embed ~depth state uinst in
       let state = update_sigma state (fun sigma -> evd_merge_sort_context_set univ_flexible_alg sigma ctx) in
-      uinst, state, [API.Conversion.Unify (v', lp_uinst)]
+      uinst, state, (API.Conversion.Unify (v', lp_uinst) :: extra_goals)
 
 (* FIXME PARTIAL API
  *
@@ -2054,10 +2054,6 @@ T = (pglobal GR [])"|}))),
     in
     state, !: t, [])), DocAbove); *)
 
-  LPCode {|
-macro @global GR :- pglobal GR @empty-univ-instance.
-|};
-
   MLCode(Pred("coq.env.global",
     InOut(B.ioarg (B.poly "gref"), "GR",
     InOut(B.ioarg (B.poly "term"), "T",
@@ -2207,11 +2203,11 @@ Supported attributes:
         let term, ctx =
           UnivGen.fresh_global_instance (get_global_env state) (GlobRef.ConstructRef kon) in
         let uinst = snd @@ Constr.destConstruct term in
-        let state, lp_uinst = uinstancein ~depth state uinst in
+        let state, lp_uinst, extra_goals = uinstance.Conv.embed ~depth state uinst in
         uinst,
         update_sigma state
           (fun sigma -> evd_merge_sort_context_set univ_flexible_alg sigma ctx),
-        [API.Conversion.Unify (v', lp_uinst)]
+        (API.Conversion.Unify (v', lp_uinst) :: extra_goals)
     in
     let ty = if_keep ty (fun () ->
       Inductive.type_of_constructor (kon, uinst) ind
@@ -2557,7 +2553,6 @@ Supported attributes:
        warn_deprecated_add_axiom ();
        let gr, uinst, uctx = add_axiom_or_variable "coq.env.add-const" id ty local_bkind options state in
        let uinst = UVars.Instance.of_level_instance uinst in
-       let uinst = uinstance_to_list uinst in
        uctx, state, !: (global_constant_of_globref gr) +! uinst, []
      end
     | B.Given body ->
@@ -2604,7 +2599,6 @@ Supported attributes:
         | Locality.Global _ -> Dumpglob.dump_definition lid false "def"
        in
        let state = update_sigma state (Evd.fix_undefined_variables ~vars:(snd @@ UVars.Instance.levels uinst)) in
-       let uinst = uinstance_to_list uinst in
        uctx, state, !: (global_constant_of_globref gr) +! uinst, []))),
   DocAbove);
 
@@ -2631,7 +2625,6 @@ Supported attributes:
      let gr, uinst, uctx = add_axiom_or_variable "coq.env.add-axiom-uinst" id ty None options state in
      let uinst = UVars.Instance.of_level_instance uinst in
      let state = update_sigma state (Evd.fix_undefined_variables ~vars:(snd @@ UVars.Instance.levels uinst)) in
-     let uinst = uinstance_to_list uinst in
      uctx, state, !: (global_constant_of_globref gr) +! uinst, []))),
   DocAbove);
 
@@ -2689,7 +2682,6 @@ Supported attributes:
           (uinst, Polymorphic_entry (uctx, variances), UState.Polymorphic_entry (uctx, variances), univ_binders)
        in
      let () = Global.push_context_set uctx in
-     let uinst = uinstance_to_list uinst in
      let mind =
        let univ_binders = univ_binder_compat_820 (uentry', ubinders) univ_binders in
        declare_mutual_inductive_with_eliminations ~primitive_expected ~default_dep_elim me univ_binders ind_impls in
@@ -3164,13 +3156,48 @@ phase unnecessary.|};
 
   LPDoc "-- Universe instance (for universe polymorphic global terms) ------";
 
-  LPDoc {|A universe polymorphic constant can be instantiated with universes.
+  LPDoc {|A universe polymorphic constant can be instantiated with sorts and universes.
 
-A univ-instance is simply a list of sorts and universe levels.
+A univ-instance is morally a list of sorts and universes,
+but its list syntax is hidden in the terms. If you really need to
+craft or inspect one of these, the following APIs can help you.
 
 Most of the time the user is expected to use coq.env.global which
 crafts a fresh, appropriate, universe instance and possibly unify that
 term (of the instance it contains) with another one.|};
+
+  MLData uinstance;
+
+  MLCode(Pred("coq.univ-instance",
+    InOut(B.ioarg uinstance, "UI",
+    InOut(B.ioarg (list B.(ioarg_poly "univ")), "UL",
+    Full(global, "relates a univ-instance UI and a list of universes UL"))),
+  (fun uinst_arg univs_arg ~depth { env ; options } _ state ->
+    match uinst_arg, univs_arg with
+    | Data uinst, _ ->
+      let elpi_term_of_univ state u =
+        let state, t, gls = univ.Conv.embed ~depth state u in
+        assert (gls = []);
+        state, mkData t
+      in
+      let quals, univs = UVars.Instance.to_array uinst in
+      let () = if not (CArray.is_empty quals) then nYI "sort poly" in
+      let state, univs =
+        CArray.fold_left_map elpi_term_of_univ state univs in
+      state, ?: None +! Array.to_list univs, []
+    | NoData, Data univs ->
+      let readback_or_new state = function
+        | NoData -> let state, (_,u) = new_univ_level_variable state in state, u, []
+        | Data t -> let state, u, gls = univ.Conv.readback ~depth state t in
+        state, u, gls
+      in
+      let state, levels, gls = U.map_acc readback_or_new state univs in
+      state, !: (UVars.Instance.of_array ([||], Array.of_list levels)) +? None, gls
+    | NoData, NoData ->
+      err (Pp.str "coq.univ-instance called with no input argument")
+  )),
+  DocAbove);
+
 
   MLCode(Pred("coq.univ-instance.unify-eq",
     In(gref, "GR",
@@ -3179,8 +3206,6 @@ term (of the instance it contains) with another one.|};
     InOut(B.ioarg B.diagnostic, "Diagnostic",
     Full(global, "unifies the two universe instances for the same gref"))))),
   (fun gr ui1 ui2 diag ~depth { env } _ state ->
-    let ui1 = uinstance_of_list ui1 in
-    let ui2 = uinstance_of_list ui2 in
     unify_instances_gref gr ui1 ui2 diag env state EConstr.eq_constr_universes)),
   DocAbove);
 
@@ -3191,8 +3216,6 @@ term (of the instance it contains) with another one.|};
     InOut(B.ioarg B.diagnostic, "Diagnostic",
     Full(global, "unifies the two universe instances for the same gref. Note: if the GR is not *cumulative* (see Cumulative or #[universes(cumulative)]) then this API imposes an equality constraint."))))),
   (fun gr ui1 ui2 diag ~depth { env } _ state ->
-    let ui1 = uinstance_of_list ui1 in
-    let ui2 = uinstance_of_list ui2 in
     unify_instances_gref gr ui1 ui2 diag env state EConstr.leq_constr_universes)),
   DocAbove);
 
