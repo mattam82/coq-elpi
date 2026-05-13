@@ -59,7 +59,7 @@ bo-k-args ParamsRev K _ Args Tys R :-
   !. % the first combination that typechecks
 
 pred bo-k-args.aux i:term, i:list term, i:list term, i:term, o:term.
-bo-k-args.aux R [] [] _ R :- coq.say R, coq.typecheck R _ ok.
+bo-k-args.aux R [] [] _ R :- coq.typecheck R _ ok.
 bo-k-args.aux K [A|As] [T|Ts] (prod _ S Ty) R :-
   map-db T S F,
   coq.mk-app F [A] FA,
@@ -84,8 +84,7 @@ pred bo-params
   o:term. % map function
 
 bo-params Lno Lno Ity1 Ity2 A1 _ Ps (fix `f` Recno Fty Bo) :-
-  coq.safe-dest-app Ity1 (pglobal (indt I) Ui) _, coq.env.recursive? I, !,
-  coq.say "recursive = yes" I Ity1,
+  coq.safe-dest-app Ity1 (pglobal (indt I) _) _, coq.env.recursive? I, !,
   @pi-decl `rec` Fty f\
     map-db Ity1 Ity2 f =>
       bo-idx A1 Ity1 Ity2 0 Recno Ps (Bo f) Fty.
@@ -113,7 +112,7 @@ bo-params N Lno Ity1 Ity2 T OT Ps R :-
   bo-params N Lno Ity1 Ity2 T1 OT1 Ps R.
   
 bo-params N Lno Ity1 _ _ _ _ _ :-
-  coq.safe-dest-app Ity1 (pglobal (indt I) Ui) _, coq.say "failing on" Ity1 N Lno, coq.env.recursive? I, !,
+  coq.safe-dest-app Ity1 (pglobal (indt I) _) _, coq.env.recursive? I, !,
   stop "derive.map: Indexed data types not supported".
 
 pred map-pi i:any, o:list prop.

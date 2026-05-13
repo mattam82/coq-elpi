@@ -85,7 +85,7 @@ main (const C) Prefix [CL] :- std.do! [
   std.assert-ok! (coq.typecheck Breflect BreflectTy) "eqbOK generates illtyped term", 
   coq.ensure-fresh-global-id (Prefix ^ "eqb_OK") Namerf,
 
-  coq.env.add-const Namerf Breflect ReflecT @opaque! Reflect,
+  coq.env.add-const Namerf Breflect BreflectTy @opaque! Reflect,
   CL = eqbok-for (const C) Reflect,
   coq.elpi.accumulate _ "derive.eqbOK.db" (clause _ _ CL),
   coq.elpi.accumulate _ "derive.eqType.db" (clause _ _ (eqType (const C) eqb.axiom)),

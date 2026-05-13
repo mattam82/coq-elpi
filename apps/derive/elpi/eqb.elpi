@@ -202,20 +202,8 @@ func fields.branch2 eqb.arguments, eqb.arguments, list term, term, term, list te
 fields.branch2 Args Args2 VarsA _ _ VarsB _ R :-
 fields.aux Args Args2 VarsA VarsB R.
 
-func flexible-univs term -> term.
-flexible-univs (pglobal GR (pr [] [])) (pglobal GR (pr [] [])) :- !. 
-flexible-univs (pglobal GR _) (pglobal GR X_) :- !. 
-% , add-constraint (coq.univ-instance.unify-eq GR GRU X) [X].
-flexible-univs (app [pglobal GR (pr [] [])|Args]) T :- !, coq.mk-app (pglobal GR (pr [] [])) {std.map Args flexible-univs} T.
-flexible-univs (app [pglobal GR _|Args]) T :- !, coq.mk-app (pglobal GR X_) {std.map Args flexible-univs} T.
-%  add-constraint (coq.univ-instance.unify-eq GR GRU X) [X].
-flexible-univs X X.
-
 func mk-eqb-for term, term -> term.
 mk-eqb-for T1 T2 R :- eqb-for T1 T2 R, !.
-mk-eqb-for T1 T2 R :- flexible-univs T1 T1', flexible-univs T2 T2',
-  coq.say "searching for boolean equality for " T1',
-  eqb-for T1' T2' R, !.
 mk-eqb-for T1 _ _ :- 
   Msg is "derive.eqb: missing boolean equality for " ^ {coq.term->string T1} ^ ", maybe use derive.eqb first",
   stop Msg.

@@ -211,7 +211,6 @@ main _ (indt GR) Suffix C :- do! [
 
   % generate clause and add to the db
   coq.env.global (indt GR) T',
-  T' = pglobal _ Ui',
   % We force different instances for the two inputs and the derived functoriality, 
   % which will result in properly generalized clauses (accumulate abstracts over the universes),
   % not fixed to directly matching universes.
@@ -219,7 +218,6 @@ main _ (indt GR) Suffix C :- do! [
   % necessary unifications.
   mk-clause 0 Lno T T' Arity [] {coq.env.global (const Funct)} Clause1 GR [] Clause2,
   C = [Clause1, Clause2],
-  coq.say "Adding param1 functor db clauses: " C,
   std.forall C (x\coq.elpi.accumulate _ "derive.param1.functor.db" (clause _ _ x)),
 ].
   
