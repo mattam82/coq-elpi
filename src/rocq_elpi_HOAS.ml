@@ -221,8 +221,8 @@ let isquality, qualityout, qualityino, (quality : Sorts.Quality.t API.Conversion
     pp = (fun fmt x ->
       let s = Pp.string_of_ppcmds (Sorts.Quality.raw_pr x) in
       Format.fprintf fmt "«%s»" s);
-    compare = Sorts.Quality.compare;
-    hash = Sorts.Quality.hash;
+    compare = (fun _ _ -> 0);
+    hash = (fun _ -> 0) (* Sorts.Quality.hash *);
     hconsed = false;
     constants = [];
   } in
@@ -258,8 +258,10 @@ let isuniv, univout, univino, (univ : Univ.Universe.t API.Conversion.t) =
     pp = (fun fmt x ->
       let s = Pp.string_of_ppcmds (Univ.Universe.pr UnivNames.pr_level_with_global_universes x) in
       Format.fprintf fmt "«%s»" s);
-    compare = Univ.Universe.compare;
-    hash = Univ.Universe.hash;
+    compare = (fun _ _ -> 0); 
+      (* Univ.Universe.compare; *)
+    hash = (fun _ -> 0); 
+    (* Univ.Universe.hash; *)
     hconsed = false;
     constants = [];
   } in
@@ -2235,6 +2237,7 @@ let in_coq_poly_gref ~depth ~origin ~failsafe s t i =
           | C.Const (_, u) -> u
           | C.Ind (_, u) -> u
           | C.Construct (_, u) -> u
+          | C.Var _ -> UVars.Instance.empty
           | _ -> assert false
         in
         let s = S.update uim s (UIM.add b u) in

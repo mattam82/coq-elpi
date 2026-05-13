@@ -99,10 +99,8 @@ do-branch X2 J F K KTY Vars _ Term :- std.do! [
   coq.safe-dest-app K (pglobal (indc KI) _) _,
   std.assert! (box-for KI _ BK) "derive.eqb: run derive.fields before",
   coq.mk-app {coq.env.global (indc BK)} {std.append ParamsI Vars} X,
-  Eqbbody = (pglobal {{:gref eqb_core_defs.eqb_body }} [U, U, U]),
-  coq.say Eqbbody,
-  Term = {{ (lp:Eqbbody _ _ _ _ lp:FLDP lp:F lp:TAG lp:X lp:X2) }},
-  coq.say Term
+  Eqbbody = (pglobal {{:gref eqb_core_defs.eqb_body }} (pr [] [U, U, U])),
+  Term = {{ (lp:Eqbbody _ _ _ _ lp:FLDP lp:F lp:TAG lp:X lp:X2) }}
 ].
 
 % -----------------------------------------------------------------------------
@@ -205,10 +203,10 @@ fields.branch2 Args Args2 VarsA _ _ VarsB _ R :-
 fields.aux Args Args2 VarsA VarsB R.
 
 func flexible-univs term -> term.
-flexible-univs (pglobal GR []) (pglobal GR []) :- !. 
+flexible-univs (pglobal GR (pr [] [])) (pglobal GR (pr [] [])) :- !. 
 flexible-univs (pglobal GR _) (pglobal GR X_) :- !. 
 % , add-constraint (coq.univ-instance.unify-eq GR GRU X) [X].
-flexible-univs (app [pglobal GR []|Args]) T :- !, coq.mk-app (pglobal GR []) {std.map Args flexible-univs} T.
+flexible-univs (app [pglobal GR (pr [] [])|Args]) T :- !, coq.mk-app (pglobal GR (pr [] [])) {std.map Args flexible-univs} T.
 flexible-univs (app [pglobal GR _|Args]) T :- !, coq.mk-app (pglobal GR X_) {std.map Args flexible-univs} T.
 %  add-constraint (coq.univ-instance.unify-eq GR GRU X) [X].
 flexible-univs X X.

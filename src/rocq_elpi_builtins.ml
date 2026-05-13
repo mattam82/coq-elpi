@@ -781,7 +781,7 @@ let preprocess_clause ~depth clause =
     | E.UnifVar _ -> CErrors.user_err Pp.(str"The clause begin accumulated contains unification variables, this is forbidden. You must quantify them out using 'pi'.")
     | E.Const _ | E.Nil | E.CData _ -> t
     in
-  let clause =
+  let clause' =
     let rec bind d map mapi = function
      | [] ->
          subst ~depth:d map mapi
@@ -799,9 +799,9 @@ let preprocess_clause ~depth clause =
        bindi depth Univ.Universe.Map.empty (ref (depth))
          (Univ.Universe.Set.elements levels_to_abstract) 0
   in
-  let vars = collect_term_variables ~depth clause in
-  (* Feedback.msg_debug Pp.(str " accumulating clause : " ++ str(pp2string (P.term depth) clause)); *)
-  vars, clause
+  let vars = collect_term_variables ~depth clause' in
+  (* Feedback.msg_debug Pp.(str " accumulating clause : " ++ str(pp2string (P.term depth) clause') ++ str" from " ++ str(pp2string (P.term depth) clause)); *)
+  vars, clause'
 
 let argument_mode = let open Conv in let open API.AlgebraicData in declare {
   ty = TyName "argument_mode";
