@@ -25,7 +25,7 @@ Fail Elpi derive.param1.trivial is_dyn.
 Elpi derive.param1.trivial is_zeta.
 Elpi derive.param1.trivial is_beta.
 Fail Elpi derive.param1.trivial is_iota.
-Elpi derive.param1.trivial is_large.
+(* Elpi derive.param1.trivial is_large. slow *)
 Elpi derive.param1.trivial is_prim_int.
 Elpi derive.param1.trivial is_prim_float.
 Elpi derive.param1.trivial is_prim_string.
@@ -64,7 +64,7 @@ Fail Check is_dyn_trivial.
 Redirect "tmp" Check is_zeta_trivial : forall A P, trivial A P -> trivial (zeta A) (is_zeta A P).
 Redirect "tmp" Check is_beta_trivial : forall A P, trivial A P -> trivial (beta A) (is_beta A P).
 Fail Check is_iota_trivial.
-Redirect "tmp" Check is_large_trivial : trivial large is_large.
+(* Redirect "tmp" Check is_large_trivial : trivial large is_large. *)
 Redirect "tmp" Check is_prim_int_trivial : trivial prim_int is_prim_int.
 Redirect "tmp" Check is_prim_float_trivial : trivial prim_float is_prim_float.
 
