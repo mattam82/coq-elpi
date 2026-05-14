@@ -135,7 +135,7 @@ namespace tc {
 
     namespace univ-poly {
       constraint solve-poly univ-poly {
-        rule solve-poly \ (univ-poly A B) <=> (coq.unify-eq T1 T2 ok).
+        rule solve-poly \ (univ-poly T1 T2) <=> (coq.unify-eq T1 T2 ok).
         rule \ solve-poly.
       }
     }

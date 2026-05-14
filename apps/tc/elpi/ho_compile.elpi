@@ -315,7 +315,7 @@ namespace tc {
     instance-gr InstGR Clause :-
       coq.env.univpoly? InstGR 0, !,
       coq.env.typeof InstGR Ty,
-      tc.compile.instance Ty (pglobal InstGR (pr [] [])) Clause.
+      tc.compile.instance Ty {coq.env.global InstGR} Clause.
     instance-gr InstGR (pi x\ Clause x) :- !,
       coq.env.typeof InstGR Ty,
       pi x\ tc.compile.instance Ty (pglobal InstGR x) (Clause x).
@@ -382,6 +382,8 @@ namespace tc {
 
       pred unif-univ-constraint term, term.
       unif-univ-constraint T1 T2 :- declare_constraint (tc.link.univ-poly T1 T2) [_].
+
+      % decompile-problematic-term (pglobal P (pr [] []) as T) L T L :- !.
 
       decompile-problematic-term (pglobal P Q as T) L (pglobal P Q' as T') L' :-
         L' = [unif-univ-constraint T T' | L].
