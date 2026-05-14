@@ -160,7 +160,7 @@ Elpi Tactic test.
 Elpi Accumulate lp:{{
 solve _ _ :-
   coq.term->string X S,
-  X = @global (indc Y),
+  X = pglobal (indc Y) _,
   coq.say S.
 }}.
 Goal True.
@@ -170,7 +170,7 @@ Abort.
 Elpi Tactic test2.
 Elpi Accumulate lp:{{
 solve _ _ :-
-  coq.term->string (@global (indc Y)) S,
+  coq.term->string (pglobal (indc Y) _) S,
   coq.say S.
 }}.
 Goal True.
