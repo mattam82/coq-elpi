@@ -797,7 +797,7 @@ let preprocess_clause ~depth clause =
          (Univ.Universe.Set.elements levels_to_abstract) instances_to_abstract
   in
   let vars = collect_term_variables ~depth clause' in
-  Feedback.msg_debug Pp.(str " accumulating clause : " ++ str(pp2string (P.term depth) clause') ++ str" from " ++ str(pp2string (P.term depth) clause));
+  (* Feedback.msg_debug Pp.(str " accumulating clause : " ++ str(pp2string (P.term depth) clause') ++ str" from " ++ str(pp2string (P.term depth) clause)); *)
   vars, clause'
 
 let argument_mode = let open Conv in let open API.AlgebraicData in declare {

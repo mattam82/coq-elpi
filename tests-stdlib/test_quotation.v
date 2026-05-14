@@ -69,7 +69,6 @@ Structure ord u := Ord { oval : nat; prop : leq oval u = true }.
 
 Check fun u => SubType _ _ _ (oval u) _ inlined_sub_rect.
 
-Set Debug "elpi".
 Elpi Query lp:{{ std.do! [
   coq.say "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
   T = {{ fun u => SubType _ _ _ (oval u) _ inlined_sub_rect }},
@@ -78,10 +77,10 @@ Elpi Query lp:{{ std.do! [
 
   std.assert-ok! (coq.elaborate-skeleton T _ T1) "does not typecheck",
   T1 = {{ fun u => SubType _ _ _ _ lp:(X u) _ }},
-  (pi u\ X u = app[@global GR, u]) % Rocq <= 9.1
+  (pi u\ X u = app[pglobal GR _, u]) % Rocq <= 9.1
   ;
-  (pi u\ X u = fun _ _ v\ fun _ _ w\ app[@global GR, u, v, w]), % Rocq > 9.1
-  std.assert! (K = @global GR, coq.locate "Ord" GR) "not the right constructor"
+  (pi u\ X u = fun _ _ v\ fun _ _ w\ app[pglobal GR _, u, v, w]), % Rocq > 9.1
+  std.assert! (K = pglobal GR _, coq.locate "Ord" GR) "not the right constructor"
 ]
 }}.
 

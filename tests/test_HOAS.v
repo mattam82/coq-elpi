@@ -79,7 +79,7 @@ Elpi Accumulate Db univs.db.
 Elpi Query lp:{{
   coq.univ.new U,
   coq.elpi.accumulate current "univs.db" (clause _ _ (u U)),
-  coq.elpi.accumulate current "univs.db" (clause _ _ (ut (pglobal {{:gref ut}} (pr [] [U])) U))
+  coq.elpi.accumulate current "univs.db" (clause _ _ (pi uinst\ ut (pglobal {{:gref ut}} uinst) U))
 }}.
 
 Universe foo.
@@ -238,7 +238,7 @@ Module P'.
   }.
 
   Elpi Query  lp:{{
-    @global (const C) = {{proj1}},
+    pglobal (const C) _ = {{proj1}},
     coq.env.projection? C 1.
   }}.
 End P'.
@@ -256,7 +256,7 @@ Module P''.
   Elpi Query  lp:{{
     app[primitive (proj P _) | _] = {{X.(proj1 _)}},
     coq.env.primitive-projection? P C _,
-    @global (const C) = {{proj1}}.
+    pglobal (const C) _ = {{proj1}}.
   }}.
 
 End P''.
@@ -264,16 +264,16 @@ End P''.
 
 Elpi Command primitive_proj.
 Elpi Accumulate lp:{{
-  main [str Kind, trm (@global (indt I)), trm T, int N, trm V] :- std.do! [
+  main [str Kind, trm (pglobal (indt I) _), trm T, int N, trm V] :- std.do! [
     coq.env.projections I [_,_],
     coq.env.primitive-projections I [some (pr _ 1), some (pr _ 2)],
     coq.env.projections I [some P1, some P2],
     if (Kind = "primitive")
        (std.assert! (T = app[primitive (proj P N),A]) "not prim proj", coq.say P N A, coq.say {coq.term->string (primitive (proj P N))})
-       (std.assert! (T = app[@global(const X), _, A], (X = P1 ; X = P2)) "not regular proj"), coq.say X A,
+       (std.assert! (T = app[pglobal(const X) _, _, A], (X = P1 ; X = P2)) "not regular proj"), coq.say X A,
     coq.say {coq.term->string T},
     std.assert! ( {{:gref P.p1 }} = const C) "wrong gref",
-    std.assert! ( {{ @P.p1 }} = @global (const C)) "wrong global",
+    std.assert! ( {{ @P.p1 }} = pglobal (const C) _) "wrong global",
     coq.env.const C BO _,
     coq.say BO,
     std.assert! (unwind {whd T []} V) "wrong value",
@@ -534,15 +534,18 @@ Elpi Query lp:{{
 
 Elpi Query lp:{{
   coq.locate "F" GRF,
-  coq.typecheck (pglobal GRF (pr [] [U])) _ ok.
+  coq.typecheck (pglobal GRF Uinst) _ ok,
+  coq.univ-instance Uinst [U]
 }}.
 
 Elpi Query lp:{{
   coq.locate "F" GRF,
-  coq.typecheck (pglobal GRF (pr [] [U1])) _ ok,
-  coq.typecheck (pglobal GRF (pr [] [U2])) _ ok,
+  coq.typecheck (pglobal GRF Ui1) _ ok,
+  coq.typecheck (pglobal GRF Ui2) _ ok,
+  coq.univ-instance Ui1 [U1],
+  coq.univ-instance Ui2 [U2],
   coq.sort.sup (typ U1) (typ U2),
-  coq.univ-instance.unify-eq GRF (pr [] [U1]) (pr [] [U2]) (error E),
+  coq.univ-instance.unify-eq GRF Ui1 Ui2 (error E),
   coq.say E.
 }}.
 
@@ -552,8 +555,8 @@ Elpi Query lp:{{
   coq.locate "F2" GRF,
   coq.typecheck (pglobal GRF I1) _ ok,
   coq.typecheck (pglobal GRF I2) _ ok,
-  I1 = pr [] [U1],
-  I2 = pr [] [U2],
+  coq.univ-instance I1 [U1],
+  coq.univ-instance I2 [U2],
   coq.sort.sup (typ U1) (typ U2),
   coq.univ.print,
   coq.univ-instance.unify-leq GRF I1 I2 ok. % why does this add a = not a <= ?
@@ -563,8 +566,8 @@ Elpi Query lp:{{
   coq.locate "F" GRF,
   coq.env.global GRF (pglobal GRF I1),
   coq.typecheck (pglobal GRF I2) _ ok,
-  I1 = pr [] [U1],
-  I2 = pr [] [U2],
+  coq.univ-instance I1 [U1],
+  coq.univ-instance I2 [U2],
   coq.sort.sup (typ U1) (typ U2),
   coq.univ.print,
   coq.univ-instance.unify-leq GRF I2 I1 (error E),
@@ -578,7 +581,8 @@ Elpi Query lp:{{
 
 Elpi Query lp:{{
   coq.locate "F" GR,
-  coq.env.global GR (pglobal GR (pr [] [U]))
+  coq.env.global GR (pglobal GR Ui),
+  coq.univ-instance Ui [U]
 }}.
 
 Elpi Query lp:{{
