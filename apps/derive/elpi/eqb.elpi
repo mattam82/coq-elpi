@@ -88,7 +88,7 @@ func do-branch term, term, term, term, term, list term, list term -> term.
 do-branch X2 J F K KTY Vars _ Term :- std.do! [
   coq.safe-dest-app KTY (pglobal (indt I) _Ui) ParamsI,
   coq.typecheck-ty KTY S ok,
-  S = typ U,
+  S = typ _U,
   std.assert! (fields-for I _ FLD _ _) "derive.eqb: run derive.fields before",
   coq.safe-dest-app J _ ParamsJ,
   coq.mk-app {coq.env.global (const FLD)} ParamsJ FLDP,
@@ -99,8 +99,7 @@ do-branch X2 J F K KTY Vars _ Term :- std.do! [
   coq.safe-dest-app K (pglobal (indc KI) _) _,
   std.assert! (box-for KI _ BK) "derive.eqb: run derive.fields before",
   coq.mk-app {coq.env.global (indc BK)} {std.append ParamsI Vars} X,
-  Eqbbody = (pglobal {{:gref eqb_core_defs.eqb_body }} (pr [] [U, U, U])),
-  Term = {{ (lp:Eqbbody _ _ _ _ lp:FLDP lp:F lp:TAG lp:X lp:X2) }}
+  Term = {{ @eqb_core_defs.eqb_body _ _ _ _ lp:FLDP lp:F lp:TAG lp:X lp:X2 }}
 ].
 
 % -----------------------------------------------------------------------------
@@ -202,8 +201,18 @@ func fields.branch2 eqb.arguments, eqb.arguments, list term, term, term, list te
 fields.branch2 Args Args2 VarsA _ _ VarsB _ R :-
 fields.aux Args Args2 VarsA VarsB R.
 
+func flexible-univs term -> term.
+flexible-univs (pglobal GR _) (pglobal GR X_) :- !. 
+% , add-constraint (coq.univ-instance.unify-eq GR GRU X) [X].
+flexible-univs (app [pglobal GR _|Args]) T :- !, coq.mk-app (pglobal GR X_) {std.map Args flexible-univs} T.
+%  add-constraint (coq.univ-instance.unify-eq GR GRU X) [X].
+flexible-univs X X.
+
 func mk-eqb-for term, term -> term.
 mk-eqb-for T1 T2 R :- eqb-for T1 T2 R, !.
+mk-eqb-for T1 T2 R :- flexible-univs T1 T1', flexible-univs T2 T2',
+  % coq.say "searching for boolean equality for " T1',
+  eqb-for T1' T2' R, !.
 mk-eqb-for T1 _ _ :- 
   Msg is "derive.eqb: missing boolean equality for " ^ {coq.term->string T1} ^ ", maybe use derive.eqb first",
   stop Msg.
