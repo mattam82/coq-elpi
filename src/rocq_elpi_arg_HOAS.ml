@@ -906,10 +906,11 @@ let grecord2lp_synterp ~depth ~name ~constructorname arity fields state =
     | Some x -> Name.Name x in
   state, in_elpi_indtdecl_record (Name.Name qrecord_name) arity constructor fields
 
-let grecord2lp_synterp ~depth state { Cmd.name; arity; params; constructorname; fields; univpoly } =
+let grecord2lp_synterp ~depth state { Cmd.name; arity; params; constructorname; fields; univpoly; univdecl } =
   let params = List.map drop_relevance params in
+  let state, univdecl = Cmd.interp_udecl state univpoly univdecl in
   let state, r = gindparams2lp_synterp ~depth params (grecord2lp_synterp ~depth ~name ~constructorname arity fields) state in
-  mk_indt_decl state univpoly NotUniversePolymorphic r
+  mk_indt_decl state univpoly univdecl r
 
 let grecord2lp ~loc ~base ~depth state { Cmd.name; arity; params; constructorname; fields; univpoly; univdecl } =
   let open Rocq_elpi_glob_quotation in
@@ -973,8 +974,9 @@ let ginductive2lp_synterp ~depth state { Cmd.finiteness; name; arity; params; nu
     state, in_elpi_indtdecl_inductive state finiteness (Name.Name qindt_name) arity constructors
   in
   (* Feedback.msg_debug Pp.(str"ginductive2lp_synterp, univpoly = " ++ PolyFlags.pr univpoly); *)
+  let state, univdecl = Cmd.interp_udecl state univpoly univdecl in
   let state, r = gindparams2lp_synterp params (do_inductive_synterp ~depth) ~depth state in
-  mk_indt_decl state univpoly NotUniversePolymorphic r
+  mk_indt_decl state univpoly univdecl r
 
 let ginductive2lp ~loc ~depth ~base state { Cmd.finiteness; name; arity; params; nuparams; nuparams_given; constructors; univpoly; univdecl } =
   let open Rocq_elpi_glob_quotation in
