@@ -205,6 +205,14 @@ let new_univ_level_variable ?(flexible=true) state =
 *)
     { e with sigma }, (v, u))
 
+let fresh_instance ?(flexible=true) state gr =
+  S.update_return (Option.get !pre_engine) state (fun ({ sigma; global_env = env } as e) ->
+    (* ~name: really mean the universe level is a binder as in Definition f@{x} *)
+    let rigidity = if flexible then UState.univ_flexible else UState.univ_rigid in
+    let sigma, v = Evd.fresh_global ~rigid:rigidity env sigma gr in
+    let _, u = EConstr.destRef sigma v in    
+    { e with sigma }, EConstr.EInstance.kind sigma u)
+
 (* 
 
   type constant = QProp | QSProp | QType
@@ -3575,7 +3583,6 @@ let lp2inductive_entry ~depth coq_ctx constraints state t =
             
     let state, poly, cumulative, udecl, variances =
       poly_cumul_udecl_variance_of_options state coq_ctx.options in
-    Feedback.msg_debug Pp.(str"lp2inductive_entry poly = " ++ bool poly ++ bool (UnivOptions.is_universe_polymorphism ()));
     let sigma = get_sigma state in
 
     (* Handling of non-uniform parameters *)

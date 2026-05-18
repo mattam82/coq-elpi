@@ -3198,22 +3198,40 @@ term (of the instance it contains) with another one.|};
 
   MLCode(Pred("coq.univ-instance.unify-eq",
     In(gref, "GR",
-    In(uinstance, "UI1",
-    In(uinstance, "UI2",
+    InOut(B.ioarg uinstance, "UI1",
+    InOut(B.ioarg uinstance, "UI2",
     InOut(B.ioarg B.diagnostic, "Diagnostic",
     Full(global, "unifies the two universe instances for the same gref"))))),
   (fun gr ui1 ui2 diag ~depth { env } _ state ->
-    unify_instances_gref gr ui1 ui2 diag env state EConstr.eq_constr_universes)),
+    let readback_or_new state = function
+    | NoData -> let state, u = fresh_instance state gr in 
+      state, u, Some u, []
+    | Data ui -> state, ui, None, []
+    in
+    let state, ui1, oui1, gls1 = readback_or_new state ui1 in
+    let state, ui2, oui2, gls2 = readback_or_new state ui2 in
+    let state, ((), diag), gls3 = unify_instances_gref gr ui1 ui2 diag env state EConstr.eq_constr_universes in
+    state, ?: oui1 +? oui2 +? diag, gls1 @ gls2 @ gls3 
+    )),
   DocAbove);
 
   MLCode(Pred("coq.univ-instance.unify-leq",
     In(gref, "GR",
-    In(uinstance, "UI1",
-    In(uinstance, "UI2",
+    InOut(B.ioarg uinstance, "UI1",
+    InOut(B.ioarg uinstance, "UI2",
     InOut(B.ioarg B.diagnostic, "Diagnostic",
     Full(global, "unifies the two universe instances for the same gref. Note: if the GR is not *cumulative* (see Cumulative or #[universes(cumulative)]) then this API imposes an equality constraint."))))),
   (fun gr ui1 ui2 diag ~depth { env } _ state ->
-    unify_instances_gref gr ui1 ui2 diag env state EConstr.leq_constr_universes)),
+        let readback_or_new state = function
+    | NoData -> let state, u = fresh_instance state gr in 
+      state, u, Some u, []
+    | Data ui -> state, ui, None, []
+    in
+    let state, ui1, oui1, gls1 = readback_or_new state ui1 in
+    let state, ui2, oui2, gls2 = readback_or_new state ui2 in
+    let state, ((), diag), gls3 = unify_instances_gref gr ui1 ui2 diag env state EConstr.leq_constr_universes in
+    state, ?: oui1 +? oui2 +? diag, gls1 @ gls2 @ gls3 
+    )),
   DocAbove);
 
   LPDoc "-- Declaration of universe polymorphic global terms -----------";
