@@ -34,10 +34,6 @@ Elpi Db derive.param2.db lp:{{
 #[superglobal] Elpi Accumulate derive.param2.db lp:{{
 
     :name "param:gref"
-    param T U (global GRR) :- 
-      coq.env.global GRT T, !, 
-      param.gref GRT GRU GRR,
-      coq.env.global GRU U.
     % coq.env.global cannot be used since while deriving param the global 
     % reference is not defined and thus cannot be located.
     param T U (pglobal GRR _) :- 
