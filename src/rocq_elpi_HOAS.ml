@@ -3828,8 +3828,7 @@ let compute_with_uinstance ~depth options state f x inst_opt =
     match i with
     | None -> state, r, None, []
     | Some uinst ->
-      let uvar = (E.mkUnifVar v_head ~args:v_args state) in
-      Feedback.msg_debug Pp.(str "making unif variable in compute_with_uinstance: " ++ str (API.RawPp.Debug.show_term uvar));
+      let uvar = (E.mkUnifVar v_head ~args:v_args state) in      
       let v' = U.move ~from:v_depth ~to_:depth uvar in
       let state, lp_uinst, extra_goals = uinstance.API.Conversion.embed ~depth state uinst in
       state, r, Some uinst, API.Conversion.Unify (v', lp_uinst) :: extra_goals    
