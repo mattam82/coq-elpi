@@ -21,7 +21,8 @@ Elpi Query lp:{{
 }}.
 
 Elpi Debug "DBG:of".
-(* Elpi Trace. *)
+Elpi Debug "DBG:unif".
+Elpi Trace Browser.
 Fail Elpi Query lp:{{
   {{plus_n_O}} = pglobal (const GR) _, coq.env.const-body GR (some B), ground_term B,
   of B TY RB
