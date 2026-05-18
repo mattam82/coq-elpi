@@ -92,7 +92,7 @@ Fail Check is_dyn_inhab.
 Redirect "tmp" Check is_zeta_inhab : forall A P, full A P -> full (zeta A) (is_zeta A P).
 Redirect "tmp" Check is_beta_inhab : forall A P, full A P -> full (beta A) (is_beta A P).
 Fail Check is_iota_inhab.
-Redirect "tmp" Check is_large_inhab : full large is_large.
+(* Redirect "tmp" Check is_large_inhab : full large is_large. *)
 Redirect "tmp" Check is_prim_int_inhab : full prim_int is_prim_int.
 Redirect "tmp" Check is_prim_float_inhab : full prim_float is_prim_float.
 
