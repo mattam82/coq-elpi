@@ -184,9 +184,8 @@ dispatch (indt GR) Prefix Clauses :- !, do! [
 
   std.assert-ok! (coq.typecheck-indt-decl DeclR) "derive.param1 generates illtyped inductive",
 
-  coq.env.add-indt-uinst DeclR GRR GRRI,
-
-  reali-store NewName Ind (pglobal (indt GRR) GRRI),
+  coq.env.add-indt DeclR GRR,
+  reali-store NewName Ind {coq.env.global (indt GRR)},
   coq.env.indt GRR _ _ _ _ RealNamesR _,
   Prefix1 is NewName ^ "_",
   forall2 Knames RealNamesR (reali-store-indc Prefix1),
