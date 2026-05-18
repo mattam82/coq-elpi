@@ -20,11 +20,8 @@ Elpi Query lp:{{
   of B TY RB.
 }}.
 
-Elpi Debug "DBG:of".
-Elpi Debug "DBG:unif".
-Elpi Trace Browser.
-Fail Elpi Query lp:{{
-  {{plus_n_O}} = pglobal (const GR) _, coq.env.const-body GR (some B), ground_term B,
+Elpi Query lp:{{
+  {{plus_n_O}} = pglobal (const GR) _, coq.env.const-body GR (some B),
   of B TY RB
 }}.
 
@@ -78,12 +75,12 @@ get-option "unif:greedy" tt => (
 ).
 }}.
 
-(* Elpi Query lp:{{
+Elpi Query lp:{{
   of {{ exists n : nat, n = 0  }} _ TY,
   coq.safe-dest-app TY (pglobal _ Ui) _,
   Hd = pglobal {{:gref ex_intro}} Ui,
   std.assert! (of {{ (lp:Hd _ _ 0 p) }} TY R) "Not searching all solutions".
-}}. *)
+}}.
  
 Elpi Accumulate lp:{{
 :before "of:bidirectional-app" % Like declaring an Arguments directive
