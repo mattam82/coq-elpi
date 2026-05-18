@@ -3398,7 +3398,7 @@ let inference_nonuniform_params_off =
 [%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
 let collapse = UState.collapse_sort_variables
 [%%else]
-let collapse = UState.collapse_sort_variables ~only_above_prop:false
+let collapse = UState.collapse_sort_variables ~to_type:true
 [%%endif]
 let restricted_sigma_of s state =
   let sigma = get_sigma state in
