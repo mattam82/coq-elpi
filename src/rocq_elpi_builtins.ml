@@ -735,7 +735,7 @@ let hints_map_all env ~secvars tc db =
   Hints.Hint_db.map_all ~secvars tc db
 [%%else]
 let hints_map_all env ~secvars tc db =
-  Hints.Hint_db.map_all env ~secvars tc db
+  Hints.Hint_db.map_all ~secvars tc db
 [%%endif]
 
 let get_instances (env: Environ.env) (sigma: Evd.evar_map) tc : type_class_instance list =
