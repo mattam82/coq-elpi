@@ -20,13 +20,13 @@ derive.eqb.main (indt I) Prefix CL :- std.do! [
   @keepunivs! => std.assert-ok! (coq.elaborate-skeleton R1Skel R1ty R1) "derive.eqb generates illtyped term", % need elaborate for prim record
   Name1 is Prefix ^ "eqb",
   coq.ensure-fresh-global-id Name1 FName1,
-  coq.env.add-const FName1 R1 R1ty ff C1,
-  coq.env.global (const C1) EQB,
+  coq.env.add-const FName1 R1 R1ty ff C1,  
 
   % populate dbs
-  derive.eqb.eqbf.do-clause FI FI [] [] EQBF [] CL1,
-  derive.eqb.eqb.do-clause FI FI [] [] EQB [] CL2,
-  CL = [CL1,CL2,eqb-done (indt I)],
+  (pi u1 \ derive.eqb.eqbf.do-clause FI FI [] [] (pglobal (const C) u1) [] (CL1 u1)),
+  (pi u2 \ derive.eqb.eqb.do-clause FI FI [] [] (pglobal (const C1) u2) [] (CL2 u2)),
+  CL = [(pi u1\ CL1 u1),(pi u2\ CL2 u2),eqb-done (indt I)],
+  coq.say "Accumulating eqb clauses: " CL,
   std.forall CL (x\ coq.elpi.accumulate _ "derive.eqb.db" (clause _ _ x)),
 ].
 derive.eqb.main (const C) Prefix CL :- std.do! [
@@ -116,9 +116,10 @@ do-clause (eqb.value-param _ AI) (eqb.value-param _ AJ) PI PJ F Todo (pi a b\ C 
   pi x a b\
     do-clause (AI x) (AJ x) [a|PI] [b|PJ] {coq.mk-app F [a,b]} Todo (C a b).
 
-do-clause (eqb.inductive Ind _) (eqb.inductive Ind _) PI PJ F Todo (eqb-for I J F :- Todo) :-
-  coq.mk-app {coq.env.global (indt Ind)} {std.rev PI} I,
-  coq.mk-app {coq.env.global (indt Ind)} {std.rev PJ} J.
+do-clause (eqb.inductive Ind _) (eqb.inductive Ind _) PI PJ F Todo (pi u1 u2\ eqb-for (I u1) (J u2) F :- Todo) :-
+  pi u1 u2\ 
+    coq.mk-app (pglobal (indt Ind) u1) {std.rev PI} (I u1),
+    coq.mk-app (pglobal (indt Ind) u2) {std.rev PJ} (J u2).
 
 
 }
@@ -202,8 +203,10 @@ fields.branch2 Args Args2 VarsA _ _ VarsB _ R :-
 fields.aux Args Args2 VarsA VarsB R.
 
 func flexible-univs term -> term.
+flexible-univs (pglobal GR X) (pglobal GR X) :- var X, !. 
 flexible-univs (pglobal GR _) (pglobal GR X_) :- !. 
 % , add-constraint (coq.univ-instance.unify-eq GR GRU X) [X].
+flexible-univs (app [pglobal GR X|Args]) (app [pglobal GR X|Args]) :- var X, !.
 flexible-univs (app [pglobal GR _|Args]) T :- !, coq.mk-app (pglobal GR X_) {std.map Args flexible-univs} T.
 %  add-constraint (coq.univ-instance.unify-eq GR GRU X) [X].
 flexible-univs X X.
@@ -211,7 +214,8 @@ flexible-univs X X.
 func mk-eqb-for term, term -> term.
 mk-eqb-for T1 T2 R :- eqb-for T1 T2 R, !.
 mk-eqb-for T1 T2 R :- flexible-univs T1 T1', flexible-univs T2 T2',
-  % coq.say "searching for boolean equality for " T1',
+  not (same_term T1 T1'), not (same_term T2 T2'),
+  coq.say "searching for boolean equality for " T1',
   eqb-for T1' T2' R, !.
 mk-eqb-for T1 _ _ :- 
   Msg is "derive.eqb: missing boolean equality for " ^ {coq.term->string T1} ^ ", maybe use derive.eqb first",
@@ -252,10 +256,9 @@ do-clause (eqb.value-param _ AI) (eqb.value-param _ AJ) PI PJ F Todo (pi a b\ C 
   pi x a b\
     do-clause (AI x) (AJ x) [a|PI] [b|PJ] {coq.mk-app F [a,b]} Todo (C a b).
 
-do-clause (eqb.inductive Ind _) (eqb.inductive Ind _) PI PJ F Todo (pi ela\ eqb-fields I J (F1 ela) :- [C ela|Todo]) :- !,
-  coq.mk-app {coq.env.global (indt Ind)} {std.rev PI} I,
-  coq.mk-app {coq.env.global (indt Ind)} {std.rev PJ} J,
-  pi ela\
-    (coq.mk-app F [ela] (F1 ela), C ela = eqb-for I J ela).
+do-clause (eqb.inductive Ind _) (eqb.inductive Ind _) PI PJ F Todo (pi u1 u2 ela\ eqb-fields (I u1) (J u2) (F1 u1 u2 ela) :- [C u1 u2 ela|Todo]) :- !,
+  pi u1 u2 ela\ coq.mk-app (pglobal (indt Ind) u1) {std.rev PI} (I u1),
+  coq.mk-app (pglobal (indt Ind) u2) {std.rev PJ} (J u2),
+  coq.mk-app F [ela] (F1 u1 u2 ela), C u1 u2 ela = eqb-for (I u1) (J u2) ela.
      
 }
