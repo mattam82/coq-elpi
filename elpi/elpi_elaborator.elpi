@@ -84,6 +84,15 @@ unif (pglobal (indt GR1) I1) C (pglobal (indt GR2) I2) D _ leq :- !,
   coq.univ-instance.unify-leq (indt GR1) I1 I2 ok,
   unify-ctxs C D.
 
+unif (pglobal (indc GR1) I1) C (pglobal (indc GR2) I2) D _ eq :- !,
+  GR1 = GR2,
+  coq.univ-instance.unify-eq (indc GR1) I1 I2 ok,
+  unify-ctxs C D.
+unif (pglobal (indc GR1) I1) C (pglobal (indc GR2) I2) D _ leq :- !,
+  GR1 = GR2,
+  coq.univ-instance.unify-leq (indc GR1) I1 I2 ok,
+  unify-ctxs C D.
+
 % fast path for stuck term on the right
 unif X C (pglobal (indt _) _ as T) D ff U :- !, unif T D {whd X C} tt U. % TODO:1
 unif X C (pglobal (indc _) _ as T) D ff U :- !, unif T D {whd X C} tt U. % TODO:1
