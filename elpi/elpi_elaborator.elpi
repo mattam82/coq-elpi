@@ -279,7 +279,7 @@ of (match T Rty Bs) ResRtyInst (match ResT ResRty ResBs) :-
   coq.subst-prod LArgs Ty TyLArgs,
   map Ks (coq.subst-prod LArgs) KsLArgs,
   % Rty skeleton (uknown ending) = fun rargs, fun e : indt largs rargs, ?
-  mk-rty [] {coq.mk-app (pglobal (indt GR) Uinst) LArgs} TyLArgs ResRtyRaw, 
+  mk-rty [] {coq.mk-app (pglobal (indt GR) Uinst) LArgs} TyLArgs ResRtyRaw,
   of ResRtyRaw _ ResRty, unify-eq Rty ResRty,
   % Rty must type each branch
   map2 KsLArgs Kn (mk-bty Rty Lno) BsTy,
