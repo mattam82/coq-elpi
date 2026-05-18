@@ -75,10 +75,8 @@ type raw_indt_decl = Vernacentries.Preprocessed_Mind_decl.inductive
 type glob_indt_decl = Genintern.glob_sign * raw_indt_decl
 type top_indt_decl = interp_sign * glob_indt_decl
 
-[%%if coq = "9.0" || coq = "9.1"]
+[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
 type univpoly = Mono | Poly | CumulPoly
-[%%else]
-type univpoly = PolyFlags.t
 [%%endif]
 
 [%%if coq = "9.0"]
