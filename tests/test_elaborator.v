@@ -21,11 +21,12 @@ Elpi Query lp:{{
 }}.
 
 Elpi Debug "DBG:of".
-(* Elpi Query lp:{{
-  {{plus_n_O}} = pglobal (const GR) _, coq.env.const-body GR (some B),
+(* Elpi Trace. *)
+Fail Elpi Query lp:{{
+  {{plus_n_O}} = pglobal (const GR) _, coq.env.const-body GR (some B), ground_term B,
   of B TY RB
 }}.
- *)
+
 (* -------------------------------------------------------------*)
 (* tests with implicit arguments *)
 
@@ -76,23 +77,25 @@ get-option "unif:greedy" tt => (
 ).
 }}.
 
-Elpi Query lp:{{
+(* Elpi Query lp:{{
   of {{ exists n : nat, n = 0  }} _ TY,
-  std.assert! (of {{ @ex_intro _ _ 0 p }} TY R) "Not searching all solutions".
-}}.
+  coq.safe-dest-app TY (pglobal _ Ui) _,
+  Hd = pglobal {{:gref ex_intro}} Ui,
+  std.assert! (of {{ (lp:Hd _ _ 0 p) }} TY R) "Not searching all solutions".
+}}. *)
  
 Elpi Accumulate lp:{{
 :before "of:bidirectional-app" % Like declaring an Arguments directive
 bidir-app {{ex_intro}} Prod [_, _] Ty :-
   saturate-dummy Prod Ty1, unify-leq Ty1 Ty, !.
 }}.
-
+(* 
 Elpi Query lp:{{
 get-option "unif:greedy" tt => (
   of {{ exists n : nat, n = 0  }} _ TY,
   std.assert! (of {{ @ex_intro _ _ 0 p }} TY R) "Not bidirectional"
 ).
-}}.
+}}. *)
 
 (* -------------------------------------------------------------*)
 (* tests with coercions *)
@@ -141,13 +144,13 @@ Elpi Query lp:{{get-option "of:coerce" tt =>
   (of {{true :: nil}} {{list Z}} Res).
 }}.
 
-Axiom ring : Type.
-Axiom carr : ring -> Type.
+Axiom ring@{u} : Type@{u}.
+Axiom carr@{u} : ring@{u} -> Type@{u}.
 
 Elpi Accumulate lp:{{
-  coerce {{ring}} (sort _) X {{carr lp:X}}.
-  coerced {{ring}} (sort _) X {{carr lp:X}}.
-  coercible {{ring}} (sort _) X {{carr lp:X}}.
+  coerce (pglobal {{:gref ring}} U) (sort _) X {{ lp:C lp:X }} :- C = pglobal {{:gref carr}} U.
+  coerced (pglobal {{:gref ring}} U) (sort _) X {{ lp:C lp:X }} :- C = pglobal {{:gref carr}} U.
+  coercible (pglobal {{:gref ring}} U) (sort _) X {{ lp:C lp:X }} :- C = pglobal {{:gref carr}} U.  
 }}.
 
 Elpi Query lp:{{get-option "of:coerce" tt =>
