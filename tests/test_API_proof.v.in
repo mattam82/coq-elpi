@@ -26,6 +26,20 @@ Elpi Accumulate lp:{{
     @pi-parameter ID TY p\
     coq.typecheck (P p) (A p) ok,
     coq.ltac.collect-goals (P p) GL _.
+  main-interp-proof [upoly-const-decl S none (parameter ID _ TY p\arity (A p)) Udecl] _ (fun N TY P) GL S  :-
+    std.map {coq.env.section-variables} (x\coq.gref->id (const x)) LID,
+    std.assert! (not(std.mem LID ID)) "name collision",
+    coq.id->name ID N,
+    @pi-parameter ID TY p\
+    coq.typecheck (P p) (A p) ok,
+    coq.ltac.collect-goals (P p) GL _.
+  main-interp-proof [upoly-const-decl S (some (fun _ _ P)) (parameter ID _ TY p\arity (A p)) Udecl] _ (fun N TY P) GL S  :-
+    std.map {coq.env.section-variables} (x\coq.gref->id (const x)) LID,
+    std.assert! (not(std.mem LID ID)) "name collision",
+    coq.id->name ID N,
+    @pi-parameter ID TY p\
+    coq.typecheck (P p) (A p) ok,
+    coq.ltac.collect-goals (P p) GL _.
 
 }}.
 
@@ -83,6 +97,7 @@ qed.
 
 Succeed Print it2.
 
+(*
 lemma_ctx Lemma it3 x : x + 0 = x.
 auto.
 qed_ctx.
@@ -135,3 +150,4 @@ Elpi Accumulate lp:{{
 #[skip="9.0"] Abort.
 #[skip="9.0"] lemma_if it4 : (True).
 #[skip="9.0"] Fail Show.
+*)
