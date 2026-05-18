@@ -3398,14 +3398,14 @@ let inference_nonuniform_params_off =
 [%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
 let collapse = UState.collapse_sort_variables
 [%%else]
-let collapse = UState.collapse_sort_variables ~to_type:true
+let collapse = UState.collapse_sort_variables ~only_above_prop:false
 [%%endif]
 let restricted_sigma_of s state =
   let sigma = get_sigma state in
   let ustate = Evd.ustate sigma in
   let ustate = UState.restrict_even_binders ustate s in
   (* let ustate = UState.fix_undefined_variables ustate in *)
-  let ustate = UState.collapse_sort_variables ustate in
+  let ustate = collapse ustate in
   let sigma = set_ustate sigma ustate in
   sigma
 

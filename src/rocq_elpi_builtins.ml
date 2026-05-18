@@ -697,7 +697,7 @@ let hints_map_all env ~secvars tc db =
   Hints.Hint_db.map_all ~secvars tc db
 [%%else]
 let hints_map_all env ~secvars tc db =
-  Hints.Hint_db.map_all ~secvars tc db
+  Hints.Hint_db.map_all env ~secvars tc db
 [%%endif]
 
 let get_instances (env: Environ.env) (sigma: Evd.evar_map) tc : type_class_instance list =
@@ -4768,7 +4768,7 @@ Supported attributes:
         state, (), []
       | Scheme(ref,k) ->
         let k = string_of_scheme_kind k in
-        declare_scheme_aux local (Globnames.destIndRef ref) k gr;
+        declare_scheme_aux local ref k gr;
         state, (), []
       )),
   DocAbove);
