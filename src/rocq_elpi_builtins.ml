@@ -1112,7 +1112,13 @@ let pattern_of_glob_constr env g = Patternops.pattern_of_glob_constr env g
 let get_entry_context e =
   match e.UState.universes_entry_universes with
   | UState.Monomorphic_entry x -> x
-  | _ -> Univ.ContextSet.empty
+  | UState.Polymorphic_entry _ -> Univ.ContextSet.empty
+
+let get_secvar_entry_context e =
+  match e.UState.universes_entry_universes with
+  | UState.Monomorphic_entry x -> x
+  | UState.Polymorphic_entry (uctx, _variances) -> 
+    snd (UVars.UContext.to_context_set uctx)
 
 [%%if coq = "9.0" || coq = "9.1"]
 let make_polyflags poly cumul = poly
@@ -1145,21 +1151,19 @@ let add_axiom_or_variable api id ty local_bkind options state =
   let loc = to_coq_loc @@ State.get Rocq_elpi_builtins_synterp.invocation_site_loc state in
   let id = Id.of_string id in
   let name = CAst.(make ~loc id) in
-  let gr, uinst =
-    match local_bkind with
-    | Some implicit_kind -> begin
-        Dumpglob.dump_definition name true "var";
-        comAssumption_declare_variable Vernacexpr.NoCoercion ~kind ty ~univs ~impargs implicit_kind ~name
-      end
-    | None -> begin
-      Dumpglob.dump_definition name false "ax";
+  match local_bkind with
+  | Some implicit_kind -> begin
+      Dumpglob.dump_definition name true "var";
+      let gr, uinst = comAssumption_declare_variable Vernacexpr.NoCoercion ~kind ty ~univs ~impargs implicit_kind ~name in
+      gr, uinst, get_secvar_entry_context univs
+    end
+  | None -> begin
+    Dumpglob.dump_definition name false "ax";
+    let gr, uinst = 
       comAssumption_declare_axiom Vernacexpr.NoCoercion ~local:Locality.ImportDefaultBehavior ~kind ty
-        ~univs ~impargs ~inline:options.inline ~name
-      end
-  in
-  let ucsts = get_entry_context univs in
-  gr, uinst, ucsts
-  ;;
+          ~univs ~impargs ~inline:options.inline ~name
+    in gr, uinst, get_entry_context univs
+    end
 
 type tac_abbrev = {
   abbrev_name : qualified_name;
