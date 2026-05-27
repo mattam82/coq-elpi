@@ -826,6 +826,19 @@ external func coq.env.current-section-path -> list string.
 % such as @univpoly!, @univpoly-cumul!, @udecl! or @udecl-cumul! in order to
 % declare universe polymorphic constants or inductives.
 
+% [coq.env.compute-const-udecl Bo Ty UDecl] Compute the polymorphic universe
+% decl for a constant declaration.
+% Supported attributes:
+% - @local! (default: false)
+% - @using! (default: section variables actually used)
+% - @univpoly! (default unset)
+% - @udecl! (default unset)
+% - @udecl-cumul! (default unset)
+% - @dropunivs! (default: false, drops all universe constraints from the
+% store after the definition)
+% 
+external func coq.env.compute-const-udecl term, term -> option upoly-decl.
+
 % [coq.env.add-const-uinst Name Bo Ty Opaque C UInst] Declare a new
 % constant: C gets a constant derived from Name
 % and the current module; Ty can be left unspecified and in that case

@@ -1155,7 +1155,8 @@ let add_axiom_or_variable api id ty local_bkind options state =
   | Some implicit_kind -> begin
       Dumpglob.dump_definition name true "var";
       let gr, uinst = comAssumption_declare_variable Vernacexpr.NoCoercion ~kind ty ~univs ~impargs implicit_kind ~name in
-      gr, uinst, get_secvar_entry_context univs
+      let uctx = get_secvar_entry_context univs in
+      gr, uinst, uctx
     end
   | None -> begin
     Dumpglob.dump_definition name false "ax";
@@ -2014,6 +2015,20 @@ let mis_is_recursive { Declarations.mind_recargs } =
 let mis_is_recursive = Inductiveops.mis_is_recursive
 [%%endif]
 
+
+let udecl_of_uctx poly uctx = 
+  if PolyFlags.univ_poly poly then
+    let levels = UVars.UContext.instance uctx in
+    let cstrs = UVars.UContext.univ_constraints uctx in
+    let qs, us = UVars.LevelInstance.to_array levels in
+    let () = assert (Array.length qs == 0) in
+    let levels = Array.to_list us in
+    if PolyFlags.cumulative poly then
+      let levels = List.map (fun l -> l, None) levels in
+      Some (Cumul ((levels, false), (cstrs, false)))
+    else Some (NonCumul ((levels, false), (cstrs, false)))
+  else None
+
 let coq_rest_builtins =
   let open API.BuiltIn in
   let open Pred in
@@ -2516,6 +2531,56 @@ Supported attributes:
          "@univpoly!, @univpoly-cumul!, @udecl! or @udecl-cumul! in order to declare "^
          "universe polymorphic constants or inductives."
          );
+
+
+  MLCode(Pred("coq.env.compute-const-udecl",
+    CIn(B.unspecC closed_ground_term, "Bo",
+    CIn(B.unspecC closed_ground_term, "Ty",
+    Out(option universe_decl, "UDecl",
+    Full (global, {|Compute the polymorphic universe decl for a constant declaration.
+Supported attributes:
+- @local! (default: false)
+- @using! (default: section variables actually used)
+- @univpoly! (default unset)
+- @udecl! (default unset)
+- @udecl-cumul! (default unset)
+- @dropunivs! (default: false, drops all universe constraints from the store after the definition)
+|})))),
+  (fun body types _ ~depth {options} _ -> grab_global_env "coq.env.add-const" (fun state ->
+    (* Local variables/defs cannot be polymorphic *)
+    if options.local = Some true then Univ.ContextSet.empty, state, !: None, [] else
+    let state, poly, cumul, udecl, _ = poly_cumul_udecl_variance_of_options state options in
+    let env = get_global_env state in
+    let sigma = get_sigma state in
+    let poly = (make_polyflags poly cumul) in        
+     match body with
+     | B.Unspec -> (* axiom *)
+       begin match types with
+       | B.Unspec ->
+          err Pp.(str "coq.env.compute-const-udecl: both Type and Body are unspecified")
+       | B.Given typ ->
+        let sigma = UnivVariances.register_universe_variances_of_type env sigma typ in
+        let sigma = Evd.minimize_universes ~poly sigma in
+        let uctx = Evd.to_universe_context sigma in
+        let udecl = udecl_of_uctx poly uctx in
+        Univ.ContextSet.empty, state, !: udecl, []
+       end
+      | B.Given body -> 
+        let typ =
+          match types with
+          | B.Unspec -> None
+          | B.Given typ -> Some typ
+        in
+        if not (is_ground sigma body) then
+         err Pp.(str"coq.env.compute-const-decl: the body must be ground. Did you forget to call coq.typecheck?");
+        let sigma = restrict_constant_universes state body typ udecl in
+        let sigma = UnivVariances.register_universe_variances_of env sigma ?typ body in
+        let sigma = Evd.minimize_universes ~poly sigma in
+        let uctx = Evd.to_universe_context sigma in
+        let udecl = udecl_of_uctx poly uctx in
+        let state = update_sigma state (fun _ -> sigma) in
+        Univ.ContextSet.empty, state, !: udecl, []))), 
+    DocAbove);
 
   MLCode(Pred("coq.env.add-const-uinst",
     In(id,   "Name",
