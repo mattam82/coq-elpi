@@ -112,7 +112,7 @@ mlock Definition up2@{u +} (T : Type@{u}) (W : Type) (x : T) := x.
 About up2.body.
 Elpi Query lp:{{ coq.locate "up2" GR, coq.env.univpoly? GR 2 }}.
 
-Fail mlock Definition up3@{u} (T : Type@{u}) (W : Type) (x : T) := x.
+mlock Definition up3@{u} (T : Type@{u}) (W : Type) (x : T) := x.
 
 (* #704 ----------------------- *)
 

@@ -40,26 +40,20 @@ make-key ID (pglobal (const C) Uinst) :- std.do! [
 % -------------------------------------------------------------------------
 
 func module-lock id, term, arity, option upoly-decl ->.
-module-lock ID Bo Arity UnivDecl :- std.do! [
+module-lock ID Bo Arity UDecl :- std.do! [
   coq.arity->term Arity Ty,
   std.assert-ok! (coq.typecheck-ty Ty _) "locker: definition type illtyped",
   std.assert-ok! (coq.typecheck Bo Ty) "locker: definition body illtyped",
 
-  % FIXME, call minimization after typecheck and return the universe decl.
-
-  % we craft all constants now since we need to put *in the interface* the
-  % extra universe constraints (if upoly) which are necessary for the body!
-  if (UnivDecl = some UD)
-    (std.do![
-      PTY = {{ @eq lp:Ty lp:Bo lp:Bo }},
-      std.assert-ok! (coq.typecheck-ty PTY _) "lock: unlock statement illtyped",
-      P = {{ @refl_equal lp:Ty lp:Bo }},
-      std.assert-ok! (coq.typecheck P PTY) "locker: unlock proof illtyped",
-      coq.upoly-decl.complete-constraints UD UD1,
-      UnivDecl1 = some UD1])
-    (UnivDecl1 = none),
-  lock-module-type ID Ty Bo UnivDecl1 Signature,
-  lock-module-body Signature ID Ty Bo UnivDecl1 Symbol Module,
+  % Calls minimization and restricton and returns the universe decl, that
+  % can be used in the module type and body.
+  % Caution: this assumes that the lemma and proof do not require additional universes 
+  % and constraints once minimized themselves.
+  if (UDecl = none) (UnivDecl = none) 
+    (coq.upoly-decl->attribute UDecl Poly!,
+     Poly! => coq.env.compute-const-udecl Bo Ty UnivDecl),
+  lock-module-type ID Ty Bo UnivDecl Signature,
+  lock-module-body Signature ID Ty Bo UnivDecl Symbol Module,
 
   @global! => coq.notation.add-abbreviation ID 0 Symbol ff _,
 
@@ -80,9 +74,7 @@ lock-module-type ID Ty Bo UnivDecl M :- std.do! [
   if (UnivDecl = none) (coq.env.global (const C) B) (pglobal (const C) Uinst = B),
   PTY = {{ lp:B = lp:Bo }},
   std.assert-ok! (coq.typecheck-ty PTY _) "lock: unlock statement illtyped",
-  if (UnivDecl = some UD) (coq.upoly-decl.complete-constraints UD UD1, coq.upoly-decl->attribute (some UD1) Poly1!) 
-    (coq.upoly-decl->attribute none Poly1!),
-  Poly1! => coq.env.add-axiom "unlock" PTY _,
+  Poly! => coq.env.add-axiom "unlock" PTY _,
   coq.env.end-module-type M,
 ].
 
@@ -97,9 +89,7 @@ lock-module-body Signature ID Ty Bo UnivDecl B M :- std.do! [
   std.assert-ok! (coq.typecheck-ty PTY _) "locker: unlock statement illtyped",
   P = {{ @refl_equal lp:Ty lp:B }},
   std.assert-ok! (coq.typecheck P PTY) "locker: unlock proof illtyped",
-  if (UnivDecl = some UD) (coq.upoly-decl.complete-constraints UD UD1, coq.upoly-decl->attribute (some UD1) Poly1!)
-    (coq.upoly-decl->attribute none Poly1!),
-  Poly1! => coq.env.add-const "unlock" P PTY @opaque! _,
+  Poly! => coq.env.add-const "unlock" P PTY @opaque! _,
   coq.env.end-module M,
 ].
 
