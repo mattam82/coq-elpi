@@ -26,7 +26,6 @@ derive.eqb.main (indt I) Prefix CL :- std.do! [
   (pi u1 \ derive.eqb.eqbf.do-clause FI FI [] [] (pglobal (const C) u1) [] (CL1 u1)),
   (pi u2 \ derive.eqb.eqb.do-clause FI FI [] [] (pglobal (const C1) u2) [] (CL2 u2)),
   CL = [(pi u1\ CL1 u1),(pi u2\ CL2 u2),eqb-done (indt I)],
-  coq.say "Accumulating eqb clauses: " CL,
   std.forall CL (x\ coq.elpi.accumulate _ "derive.eqb.db" (clause _ _ x)),
 ].
 derive.eqb.main (const C) Prefix CL :- std.do! [
@@ -215,7 +214,6 @@ func mk-eqb-for term, term -> term.
 mk-eqb-for T1 T2 R :- eqb-for T1 T2 R, !.
 mk-eqb-for T1 T2 R :- flexible-univs T1 T1', flexible-univs T2 T2',
   not (same_term T1 T1'), not (same_term T2 T2'),
-  coq.say "searching for boolean equality for " T1',
   eqb-for T1' T2' R, !.
 mk-eqb-for T1 _ _ :- 
   Msg is "derive.eqb: missing boolean equality for " ^ {coq.term->string T1} ^ ", maybe use derive.eqb first",
