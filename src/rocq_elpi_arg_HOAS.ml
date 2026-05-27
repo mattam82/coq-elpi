@@ -907,7 +907,7 @@ let grecord2lp_synterp ~depth ~name ~constructorname arity fields state =
   state, in_elpi_indtdecl_record (Name.Name qrecord_name) arity constructor fields
 
 let grecord2lp_synterp ~depth state { Cmd.name; arity; params; constructorname; fields; univpoly; univdecl } =
-  let state, univdecl = Cmd.interp_udecl state univpoly univdecl in
+  let univdecl = Cmd.interp_udecl_synterp univpoly univdecl in
   let state, r = gindparams2lp_synterp ~depth params (grecord2lp_synterp ~depth ~name ~constructorname arity fields) state in
   mk_indt_decl state univpoly univdecl r
 
