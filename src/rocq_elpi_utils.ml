@@ -387,6 +387,11 @@ let detype_sort ku sigma x =
 [%%else]
 let detype_universe sigma u =
   Glob_term.UNamed (List.map (Util.on_fst (detype_level_name sigma)) (Univ.Universe.repr u))
+
+(* Fixed version from Glob_ops *)
+let glob_univ_flexible = Glob_term.UAnonymous {rigid=Some UState.univ_flexible}
+let glob_Type_sort = None, glob_univ_flexible
+
 let detype_sort ku sigma x =
   let open Sorts in
   let open Glob_ops in
@@ -396,9 +401,8 @@ let detype_sort ku sigma x =
   | Set -> glob_Set_sort
   | Type u when ku -> None, detype_universe sigma u
   | VSort (q, u) when ku -> Some (detype_qvar sigma q), detype_universe sigma u
-  | GSort (q, u) -> Some (detype_quality sigma (QGlobal q)), if ku then detype_universe sigma u else glob_rigid_univ
-  | _ -> let glob_Type_sort = None, Glob_term.UAnonymous {rigid=Some UState.univ_flexible} in (* Fixed version from Glob_ops *)
-    glob_Type_sort
+  | GSort (q, u) -> Some (detype_quality sigma (QGlobal q)), if ku then detype_universe sigma u else glob_univ_flexible
+  | _ -> glob_Type_sort
 [%%endif]
 
 (*
