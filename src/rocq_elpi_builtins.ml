@@ -1138,9 +1138,10 @@ let add_axiom_or_variable api id ty local_bkind options state =
   let state, poly, cumul, udecl, _ = poly_cumul_udecl_variance_of_options state options in
   let used = universes_of_term state ty in
   if not (is_ground (get_sigma state) ty) then
-    err Pp.(str"coq.env.add-const: the type must be ground. Did you forge to call coq.typecheck-indt-decl?");
+    err Pp.(str"coq.env.add-const: the type must be ground. Did you forget to call coq.typecheck?");
   let state = update_sigma state (fun sigma -> 
-    UnivVariances.register_universe_variances_of_type (get_global_env state) sigma ty) in
+    let sigma = UnivVariances.register_universe_variances_of_type (get_global_env state) sigma ty in
+    Evd.minimize_universes ~poly:(make_polyflags poly cumul) sigma) in    
   let ty = EConstr.to_constr (get_sigma state) ty in
   let sigma = restricted_sigma_of used state in
   (* if poly && Option.has_some local_bkind then
