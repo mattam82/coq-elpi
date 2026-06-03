@@ -2020,6 +2020,10 @@ coq.elpi.accumulate S N C :- coq.elpi.accumulate-clauses S N [C].
 % execution-site, discouraged)
 external func coq.elpi.accumulate-clauses scope, id, list clause.
 
+% [coq.elpi.abstract-clause-univs Clause AClause] 
+% Abstract universes of the clause as pi quantifications
+external func coq.elpi.abstract-clause-univs prop -> prop.
+
 % Specify if a predicate argument is in input or output mode
 kind argument_mode type.
 external symbol in : argument_mode = "1". 
