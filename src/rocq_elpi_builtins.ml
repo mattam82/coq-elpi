@@ -4896,6 +4896,17 @@ Supported attributes:
         ~scope ~dbname clauses ~depth ~options state)),
   DocAbove);
 
+
+  MLCode(Pred("coq.elpi.abstract-clause-univs",    
+    In(B.poly "prop", "Clause",
+    Out(B.poly "prop", "AClause",
+    Full (global, {|
+Abstract universes of the clause as pi quantifications|} ))),
+    (fun clause _clauseo ~depth {options} _ state ->
+      let vars, cl = preprocess_clause ~depth clause in
+      state, !: cl, [])),
+  DocAbove);
+
   MLData argument_mode;
 
   MLCode(Pred("coq.elpi.add-predicate",
