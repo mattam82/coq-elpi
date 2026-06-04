@@ -1140,7 +1140,8 @@ let add_axiom_or_variable api id ty local_bkind options state =
   if not (is_ground (get_sigma state) ty) then
     err Pp.(str"coq.env.add-const: the type must be ground. Did you forget to call coq.typecheck?");
   let state = update_sigma state (fun sigma -> 
-    let sigma = UnivVariances.register_universe_variances_of_type (get_global_env state) sigma ty in
+    let sigma = UnivVariances.register_universe_variances_of_type (get_global_env state) sigma
+      ~cumul_pb:InferCumulativity.Conv ty in
     Evd.minimize_universes ~poly:(make_polyflags poly cumul) sigma) in    
   let ty = EConstr.to_constr (get_sigma state) ty in
   let sigma = restricted_sigma_of used state in
