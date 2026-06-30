@@ -3489,9 +3489,11 @@ let comInductive_interp_mutual_inductive_constr ~cumulative ~poly ~template ~fin
   let env_ar = Environ.pop_rel_context (List.length ctx_params) env_ar_params in
   ComInductive.interp_mutual_inductive_constr ~arities_explicit:[true] ~template_syntax:[SyntaxAllowsTemplatePoly] ~flags ~env_ar ~ctx_params
 [%%else]
-let comInductive_interp_mutual_inductive_constr ~cumulative ~poly ~template ~finite ~udecl ~variances ~ctx_params ~env_ar_params =
+let comInductive_interp_mutual_inductive_constr ~sigma ~cumulative ~poly ~template ~finite ~udecl ~variances ~ctx_params ~env_ar_params =
+  let poly = PolyFlags.make ~univ_poly:poly ~cumulative ~collapse_sort_variables:true in
+  let poly = PolyFlags.set_solve_term_variables poly in
   let flags = {
-    ComInductive.poly = PolyFlags.make ~univ_poly:poly ~cumulative ~collapse_sort_variables:true;
+    ComInductive.poly = poly;
     template = Some false;
     finite;
     mode = None;
@@ -3499,7 +3501,7 @@ let comInductive_interp_mutual_inductive_constr ~cumulative ~poly ~template ~fin
   }
   in
   let udecl = { udecl with UState.univdecl_variances = variances } in
-  ComInductive.interp_mutual_inductive_constr ~arities_explicit:[true] ~template_syntax:[SyntaxAllowsTemplatePoly] ~flags ~udecl ~env_ar_params ~ctx_params
+  ComInductive.interp_mutual_inductive_constr ~sigma ~arities_explicit:[true] ~template_syntax:[SyntaxAllowsTemplatePoly] ~flags ~udecl ~env_ar_params ~ctx_params
 [%%endif]
 
 [%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]

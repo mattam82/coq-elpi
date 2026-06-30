@@ -766,7 +766,8 @@ let preprocess_clause ~depth clause =
         begin try E.mkBound (Univ.Universe.Map.find (univout c) m)
         with Not_found -> t end
     | E.CData c when isuinstance c ->
-       decr mi; E.mkBound !mi
+       if UVars.Instance.is_empty (uinstanceout c) then t
+       else (decr mi; E.mkBound !mi)
     | E.App(c,x,xs) ->
         E.mkApp c (subst ~depth m mi x) (List.map (subst ~depth m mi) xs)
     | E.Cons(x,xs) ->
@@ -2652,7 +2653,9 @@ Supported attributes:
            universe restriction: restrict will drop assignments of unused universes
            in the normalized term. *)
        let cinfo = cinfo_make state types options.using ~name:(Id.of_string id) ~typ:types ~impargs:[] () in
-       let info = Declare.Info.make ~scope ~kind ~poly:(make_polyflags poly cumul) ~udecl () in
+       let poly = make_polyflags poly cumul in
+       let poly = PolyFlags.set_solve_term_variables poly in
+       let info = Declare.Info.make ~scope ~kind ~poly ~udecl () in
        let sigma = restrict_constant_universes state body types udecl in
        let (gr, uinst), uctx =
          try declare_definition options.using ~cinfo ~info ~opaque ~body sigma
