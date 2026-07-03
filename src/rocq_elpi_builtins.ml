@@ -2315,6 +2315,16 @@ regarded as not non-informative).|})),
       else raise No_clause)),
   DocAbove);
 
+
+  MLCode(Pred("coq.env.ustate",
+    (* In(bool, "B", *)
+    Read(global, "print current ustate information"),
+  (fun ~depth {env} _ state ->
+     let sigma = get_sigma state in
+     let ustate = Evd.ustate sigma in
+     Feedback.msg_notice (UState.pr ustate))),
+  DocAbove);
+
   MLCode(Pred("coq.env.const",
     In(constant,  "GR",
     COut(!>> option closed_ground_term, "Bo",

@@ -725,6 +725,9 @@ external func coq.env.opaque? constant.
 % if so returns the number of universe variables
 external func coq.env.univpoly? gref -> int.
 
+% [coq.env.ustate] print current ustate information
+external func coq.env.ustate.
+
 % [coq.env.const GR Bo Ty] reads the type Ty and the body Bo of constant
 % GR.
 % Opaque constants have Bo = none.
