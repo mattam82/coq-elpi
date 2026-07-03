@@ -224,6 +224,12 @@ let grab_global_env_drop_sigma api thunk = (); (fun state ->
   let state, result, gls = thunk state in
   Rocq_elpi_HOAS.grab_global_env_drop_sigma state, result, gls)
 
+let grab_global_env_drop_univs_and_sigma api thunk = (); (fun state ->
+  if State.get tactic_mode state then
+    Rocq_elpi_utils.err Pp.(strbrk ("API " ^ api ^ " cannot be used in tactics"));
+  let state, result, gls = thunk state in
+  Rocq_elpi_HOAS.grab_global_env_drop_univs_and_sigma ~force:true state, result, gls)
+
 let grab_global_env_drop_sigma_keep_univs api thunk = (); (fun state ->
   if State.get tactic_mode state then
     Rocq_elpi_utils.err Pp.(strbrk ("API " ^ api ^ " cannot be used in tactics"));
@@ -3035,7 +3041,7 @@ denote the same x as before.|};
 
   MLCode(Pred("coq.env.end-section",
     Full(unit_ctx, "end the current section *E*"),
-  (fun ~depth _ _ -> grab_global_env_drop_sigma "coq.env.end-section" (fun state ->
+  (fun ~depth _ _ -> grab_global_env_drop_univs_and_sigma "coq.env.end-section" (fun state ->
     let { section } = empty_conv_context ~options:(default_options ()) state in
     let state = State.update clauses_for_later_interp state (List.filter (fun (_, _, vars, _) ->
       not (List.exists (fun v -> List.mem v section) vars)

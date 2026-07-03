@@ -2807,10 +2807,10 @@ let grab_global_env ~uctx state =
     else
       let state = S.set engine state (CoqEngine_HOAS.from_env_keep_univ_and_sigma ~uctx ~env0 ~env (get_sigma state)) in
       state
-let grab_global_env_drop_univs_and_sigma state =
+let grab_global_env_drop_univs_and_sigma ?(force=false) state =
   let env0 = get_global_env state in
   let env = Global.env () in
-  if env == env0 then state
+  if not force && env == env0 then state
   else
     let state = S.set engine state (CoqEngine_HOAS.from_env_sigma env (Evd.from_env env)) in
     let state = UVMap.empty state in
