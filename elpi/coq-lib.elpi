@@ -308,9 +308,7 @@ coq.build-mindt-decl-block Pairs ParamsR (coq.indt-spec _ _ _ _ Kns Ktys) Block 
 func coq.build-mindt-decl-copy-clauses list (pair inductive term), list term -> list prop.
 coq.build-mindt-decl-copy-clauses [] _ [].
 coq.build-mindt-decl-copy-clauses [pr GR I|Rest] ParamsR [
-    (pi l rest r\ copy (app[global (indt GR)|l]) r :- !, std.append ParamsR rest l, coq.mk-app I rest r, !),
     (pi l rest r ui\ copy (app[pglobal (indt GR) ui|l]) r :- !, std.append ParamsR rest l, coq.mk-app I rest r, !),
-    (copy (global (indt GR)) I :- !),
     (pi ui\ copy (pglobal (indt GR) ui) I :- !)
   | More] :-
   coq.build-mindt-decl-copy-clauses Rest ParamsR More.

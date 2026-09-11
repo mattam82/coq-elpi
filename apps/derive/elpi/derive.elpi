@@ -185,7 +185,7 @@ func decl+main.post string, indt-decl -> list prop.
 decl+main.post ModName DS CL :- std.do! [
   coq.indt-decl->ids DS IDs,
   std.map IDs (module-indt ModName) IS,
-  std.map IS (i\r\ r = global (indt i)) ITS,
+  std.map IS (i\r\ coq.env.global (indt i) r) ITS,
   std.map IS (i\r\ coq.env.indt i _ _ _ _ r _) KBlocks,
   std.flatten KBlocks KS,
   std.map KS (k\r\ r = indc k) KGRS,

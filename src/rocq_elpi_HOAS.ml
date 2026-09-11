@@ -4261,10 +4261,14 @@ let find_structure env ind = Structures.Structure.find env ind
 
 [%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
 let get_template_instance mind uinst = uinst
-[%%else]
+[%%elif coq = "9.3"]
 let get_template_instance mind uinst = match mind.Declarations.mind_template with
 | None -> uinst
 | Some templ -> templ.template_defaults
+[%%else]
+let get_template_instance mind uinst = match Declareops.inductive_template mind with
+| None -> uinst
+| Some templ -> UVars.Instance.of_level_instance templ.template_defaults
 [%%endif]
 
 let inductive_decl2lp ~depth coq_ctx constraints state (mutind,uinst,mind,(i_impls,k_impls)) =

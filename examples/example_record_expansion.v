@@ -208,6 +208,7 @@ main [str R, str In, str Prefix] :- !,
 main _ :- coq.error "usage: Elpi record.expand record_name global_term prefix".
 }}.
 
+Unset Universe Polymorphism.
 
 Record r := { T :> Type; X := T; op : T -> X -> bool }.
 

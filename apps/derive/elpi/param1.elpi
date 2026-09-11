@@ -135,12 +135,12 @@ build-raw-mutual-spec Prefix GR (raw-mindt-spec GR FNewName IsInd Ty KNames KNam
 func translate-mutual-spec raw-mindt-spec, inductive -> coq.indt-spec.
 translate-mutual-spec (raw-mindt-spec GR    FNewName IsInd Ty    KNames  KNamesR KTypes) NewGR
                        (coq.indt-spec NewGR FNewName IsInd TyOut KNamesR KTypesR) :-
-  Ind = global (indt GR),
+  Ind = pglobal (indt GR) Ui,
   reali Ty TyR,
   coq.mk-app TyR [Ind] TyOut,
   map2 KNames KTypes (k\ ty\ r\ sigma tyr\
     reali ty tyr,
-    coq.mk-app tyr [global (indc k)] r) KTypesR.
+    coq.mk-app tyr [pglobal (indc k) Ui] r) KTypesR.
 
 func main-mblock list raw-mindt-spec, list raw-mindt-spec, list inductive -> list prop.
 main-mblock All [] Acc Clauses :- !,
@@ -148,19 +148,22 @@ main-mblock All [] Acc Clauses :- !,
   main-mblock-aux All NewGRs Clauses.
 main-mblock All [raw-mindt-spec GR _ _ _ _ _ _|Rest] Acc Clauses :-
   % a fresh name for each inductive
-  pi newGR\ (reali (global (indt GR)) (global (indt newGR)) :- !) => main-mblock All Rest [newGR|Acc] Clauses.
+  pi newGR\ (reali.gref (indt GR) (indt newGR) :- !) => main-mblock All Rest [newGR|Acc] Clauses.
+
+func reali-store-gr string, gref, gref -> .
+reali-store-gr Name X Y :- reali-store Name {coq.env.global X} {coq.env.global Y}.
 
 func reali-store-mutual-indt list raw-mindt-spec,  list inductive -> .
 reali-store-mutual-indt [] [].
 reali-store-mutual-indt [raw-mindt-spec GR FNewName _ _ _ _ _|MoreInd] [RealGR|MoreGR] :-
-  reali-store FNewName (global (indt GR)) (global (indt RealGR)),
+  reali-store-gr FNewName (indt GR) (indt RealGR),
   reali-store-mutual-indt MoreInd MoreGR.
 
 func reali-store-mutual-indcs string, list constructor, list constructor -> .
 reali-store-mutual-indcs _ [] [].
 reali-store-mutual-indcs Prefix [K|KS] [KR|KRS] :-
   N is Prefix ^ {coq.gref->id (indc K)},
-  reali-store N (global (indc K)) (global (indc KR)),
+  reali-store-gr N (indc K) (indc KR),
   reali-store-mutual-indcs Prefix KS KRS.
 
 func reali-store-mutual-indc list raw-mindt-spec, list inductive -> .
@@ -175,10 +178,10 @@ func build-and-accumulate-clauses list raw-mindt-spec, list inductive -> list pr
 build-and-accumulate-clauses [] [] [].
 build-and-accumulate-clauses [raw-mindt-spec GR _ _ _ KNames _ _|Raws] [RealGR|RealGRs] Clauses :-
   coq.env.indt RealGR _ _ _ _ RealKNames _,
-  map2 KNames RealKNames (a\ b\ r\ r = (reali (global (indc a)) (global (indc b)) :- !)) CK,
+  map2 KNames RealKNames (a\ b\ r\ r = (reali.gref (indc a) (indc b) :- !)) CK,
   CDone = reali-done (indt GR),
-  CReali = (reali (global (indt GR)) (global (indt RealGR)) :- !),
-  CRealiR = (realiR (global (indt GR)) (global (indt RealGR)) :- !),
+  CReali = (reali.gref (indt GR) (indt RealGR) :- !),
+  CRealiR = (realiR (pglobal (indt GR) _) (pglobal (indt RealGR) _) :- !),
   coq.elpi.accumulate _ "derive.param1.db" (clause _ _ CDone),
   coq.elpi.accumulate _ "derive.param1.db" (clause _ (before "realiR:fail") CRealiR),
   std.forall [CReali|CK] (x\coq.elpi.accumulate _ "derive.param1.db" (clause _ (before "reali:fail") x)),

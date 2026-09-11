@@ -10,6 +10,8 @@ From elpi.apps.derive.elpi Extra Dependency "derive_synterp_hook.elpi" as derive
 From elpi Require Import elpi.
 From elpi.apps Require Import derive.
 
+Unset Universe Polymorphism.
+
 Definition contractible T := { x : T & forall y, @eq T x y }.
 
 Register contractible as elpi.derive.contractible.

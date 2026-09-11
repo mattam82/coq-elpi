@@ -114,7 +114,7 @@ translated-lno-gref _ _ 0 :- !.
 func translated-members list inductive -> list inductive.
 translated-members [] [].
 translated-members [I|IS] [IR|IRS] :-
-  reali (global (indt I)) (global (indt IR)),
+  reali ({coq.env.global (indt I)}) ({coq.env.global (indt IR)}),
   translated-members IS IRS.
 
 }

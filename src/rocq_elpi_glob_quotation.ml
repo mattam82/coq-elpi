@@ -393,13 +393,6 @@ let gterm2lpast ~pattern ~language state glob =
       let hd = in_elpiast_gr ~loc (GlobRef.ConstRef p) in
       hd *)
   | GRef(gr, ul) when Global.is_polymorphic gr ->
-    let gr =
-      match gr with
-      | GlobRef.ConstRef p when Structures.PrimitiveProjections.mem p ->
-        let p = Option.get @@ Structures.PrimitiveProjections.find_opt p in
-        GlobRef.ConstRef (Projection.Repr.constant p)
-      | _ -> gr
-    in
     begin match ul with
     | None ->
       let s = A.Term.mkVar ~loc ~hdloc:loc (fresh_uv ()) [] in

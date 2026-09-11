@@ -54,7 +54,7 @@ pred bo-k-args i:list term, i:term,  i:term, i:list term, i:list term, o:term.
 bo-k-args ParamsRev K _ Args Tys R :-
   rev ParamsRev Params,
   coq.safe-dest-app K (pglobal (indc GR) Ui) _,
-  @uinstance! Ui => coq.env.typeof (indc GR) T, coq.subst-prod Params T KT,
+  (@uinstance! Ui => coq.env.typeof (indc GR) T), coq.subst-prod Params T KT,
   (bo-k-args.aux {coq.mk-app (pglobal (indc GR) Ui) Params} Args Tys KT R).
 
 pred bo-k-args.aux i:term, i:list term, i:list term, i:term, o:term.
@@ -132,7 +132,7 @@ type mutual-spec inductive -> string -> term -> term -> term -> term -> mutual-s
 
 func build-mutual-spec bool, string, inductive -> mutual-spec.
 build-mutual-spec Mutual Prefix GR (mutual-spec GR Prefix1 T T Arity Arity) :-
-  T = global (indt GR),
+  T = pglobal (indt GR) _,
   if (Mutual = tt) (Prefix1 is {coq.gref->id (indt GR)} ^ "_")
       (Prefix1 is Prefix),
   coq.env.indt GR _ _ _ Arity _ _.
@@ -212,7 +212,7 @@ add-mutual-map-consts All [S|SS] Lno Focus [map-done GR,Clause|CS] :- std.do! [
   Name is Prefix ^ "map",
   coq.ensure-fresh-global-id Name FName,
   coq.env.add-const FName R Ty @transparent! Funct,
-  mk-clause 0 Lno T T Arity [] (@global (const Funct)) Clause,
+  mk-clause 0 Lno T T Arity [] {coq.env.global (const Funct)} Clause,
   coq.elpi.accumulate _ "derive.map.db" (clause _ _ Clause),
   coq.elpi.accumulate _ "derive.map.db" (clause _ _ (map-done GR)),
   Focus1 is Focus + 1,

@@ -200,8 +200,8 @@ type mutual-spec inductive -> term -> term -> term -> term -> mutual-spec.
 
 func mutual-spec inductive -> mutual-spec.
 mutual-spec GR (mutual-spec GRR T T Arity Arity) :-
-  reali (global (indt GR)) (global (indt GRR)),
-  T = global (indt GRR),
+  reali {coq.env.global (indt GR)} {coq.env.global (indt GRR)},
+  coq.env.global (indt GRR) T,
   coq.env.indt GRR _ _ _ Arity _ _.
 
 func mutual-spec-ind mutual-spec -> inductive.
@@ -343,7 +343,7 @@ mutual-functor-param1-k-args All Funs K _ Args Tys R :-
   R = fun `PB` {{ lp:A -> Type }} (PB\ fun `f` (Fty PB) (F\ Body PB F)),
   @pi-decl `PB` {{ lp:A -> Type }} PB\ @pi-decl `f` (Fty PB) F\ sigma GR KT KAPB\
     Fty PB = prod `z` A (z\ prod `_` (app [PA,z]) (_\ app [PB,z])),
-    coq.safe-dest-app K (global (indc GR)) _,
+    coq.safe-dest-app K (pglobal (indc GR) _) _,
     coq.env.typeof (indc GR) KTy,
     coq.subst-prod [A,PB] KTy KT,
     coq.mk-app K [A,PB] KAPB,
@@ -469,7 +469,7 @@ add-mutual-functor-consts All [S|SS] Suffix Lno Focus [Clause1, Clause2|CS] :- s
   std.assert! (body-mutual-params Lno All Focus R) "derive.param1_functor: failed to generate mutual term",
   std.assert-ok! (coq.typecheck R Rty) "derive.param1_functor generates illtyped mutual term",
   coq.env.add-const Name R Rty @transparent! Funct,
-  mk-clause 0 Lno T T Arity [] (global (const Funct)) Clause1 GRR [] Clause2,
+  mk-clause 0 Lno T T Arity [] {coq.env.global (const Funct)} Clause1 GRR [] Clause2,
   std.forall [Clause1,Clause2] (x\coq.elpi.accumulate _ "derive.param1.functor.db" (clause _ _ x)),
   Focus1 is Focus + 1,
   add-mutual-functor-consts All SS Suffix Lno Focus1 CS
