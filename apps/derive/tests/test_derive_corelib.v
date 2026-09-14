@@ -33,7 +33,7 @@ Inductive rose_p (A B : Type) := Leafp (p : pair A B) | Nodep (sib : pair (rose_
 
 Inductive rose_o (A : Type) := Leafo (a : A) | Nodeo (x: pair (rose A) (rose A)) (sib : option (seq (rose A))).
 
-Monomorphic Inductive mtree (A : Type) := mLeaf (a : A) | mNode (_ : mforest A) with mforest (A : Type) := mEnd | mTree (_ : mtree A) (_ : mforest A).
+Inductive mtree (A : Type) := mLeaf (a : A) | mNode (_ : mforest A) with mforest (A : Type) := mEnd | mTree (_ : mtree A) (_ : mforest A).
 
 Inductive nest A := NilN | ConsN (x : A) (xs : nest (pair A A)).
 

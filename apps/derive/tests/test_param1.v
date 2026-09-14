@@ -47,8 +47,27 @@ Elpi derive.param1 mempty.
 Elpi derive.param1 munit.
 Elpi derive.param1 mpeano.
 Elpi derive.param1 moption.
-Elpi derive.param1 mtree.
 
+Elpi derive.param1 mtree.
+Set Printing Universes.
+Print is_mtree.
+(*
+This seems overgeneralized: each constructor takes a PA in a different universe lower than u0/u3 which themselves could be merged.
+
+Inductive is_mtree@{u u0 u1 u2 u3 u4 u5} : forall A : Type@{u}, (A -> Type@{u0}) -> mtree@{u} A -> Type@{max(u+1,u1+1,u2+1,u4+1,u5+1)} :=
+  is_mLeaf : forall (A : Type@{u}) (PA : A -> Type@{u1}) (a : A), PA a -> is_mtree@{u u0 u1 u2 u3 u4 u5} A PA (mLeaf@{u} A a)
+| is_mNode : forall (A : Type@{u}) (PA : A -> Type@{u2}) (H : mforest@{u} A), is_mforest@{u u0 u1 u2 u3 u4 u5} A PA H -> is_mtree@{u u0 u1 u2 u3 u4 u5} A PA (mNode@{u} A H)
+  with is_mforest@{u u0 u1 u2 u3 u4 u5} : forall A : Type@{u}, (A -> Type@{u3}) -> mforest@{u} A -> Type@{max(u+1,u1+1,u2+1,u4+1,u5+1)} :=
+  is_mEnd : forall (A : Type@{u}) (PA : A -> Type@{u4}), is_mforest@{u u0 u1 u2 u3 u4 u5} A PA (mEnd@{u} A)
+| is_mTree : forall (A : Type@{u}) (PA : A -> Type@{u5}) (H : mtree@{u} A),
+is_mtree@{u u0 u1 u2 u3 u4 u5} A PA H -> forall H0 : mforest@{u} A, is_mforest@{u u0 u1 u2 u3 u4 u5} A PA H0 -> is_mforest@{u u0 u1 u2 u3 u4 u5} A PA (mTree@{u} A H H0).
+(* u(= in 1st binder, + (= for typing) in term, + in type) u0(= in 2nd binder) u1(+ (= for typing) in term, + in type) u2(+ (= for typing) in term, + in type) u3(= in 2nd binder) u4(+ (= for typing) in term, + in type) u5(+ (= for typing) in term, + in type) | u1 <= u0
+u2 <= u0
+u2 <= u3
+u4 <= u3
+u5 <= u0
+u5 <= u3 *)
+*)
 End Coverage.
 
 Import Coverage.
