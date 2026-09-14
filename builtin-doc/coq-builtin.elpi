@@ -217,8 +217,7 @@ kind term type.
 external symbol sort    : sort -> term. % Prop, Type@{i}
 
 % constants: inductive types, inductive constructors, definitions
-external symbol global  : gref -> term.
-external symbol pglobal : gref -> univ-instance -> term.
+external symbol global : gref -> univ-instance -> term.
 
 % binders: to form functions, arities and local definitions
 external symbol fun     : name -> term -> (term -> term) -> term.         % fun x : t =>
@@ -1119,6 +1118,9 @@ external func coq.univ.variable.of-term term -> coq.univ.variable.set.
 % Universes level instance for a universe-polymorphic constant
 kind univ-instance type.
 
+
+% [coq.empty-univ-instance? UI] is the univ instance empty
+external func coq.empty-univ-instance? univ-instance.
 
 % [coq.univ-instance UI UL] relates a univ-instance UI and a list of
 % universe level variables UL
