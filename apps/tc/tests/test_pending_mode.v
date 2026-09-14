@@ -1,5 +1,7 @@
 From elpi Require Import tc.
 
+Unset Universe Polymorphism.
+
 Elpi Accumulate TC.Compiler lp:{{
   :before "0"
   tc.add-class-gr _ A SM :- 
@@ -109,13 +111,24 @@ End ground1.
 
 Module ground2.
   Elpi TC.Pending_mode +.
+  
   Class C (i : Type).
-  Instance i (x: Type): C (list x). Qed.
 
+  Instance i (x: Type): C (list x). Qed.
+  
   Goal exists (x : Type), C (list x). 
     eexists. 
     apply _.
   Abort.
+
+(*
+
+            tc-elpi.apps.tc.tests.test_pending_mode.ground2.tc-C
+             (app [global (indt «list») «», c3]) 
+             (app [global (const «i») c2, c3]))] 
+
+*)
+
 End ground2.
 
 Module ground3.
@@ -188,6 +201,7 @@ Module simplEq.
     eqb x y := andb (fst x == fst y) (snd x == snd y) }.
 
   Fail Goal exists T: Type, forall n m : T, eqb n m = false.
+  Elpi Trace.
   Goal forall n m : bool, eqb n m = false. Abort.
 End simplEq.
 
