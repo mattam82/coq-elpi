@@ -74,6 +74,10 @@ reali.gref {{:gref lib:num.int63.type }} {{:gref lib:elpi.derive.is_uint63 }} :-
 reali.gref {{:gref lib:num.float.type }} {{:gref lib:elpi.derive.is_float64 }} :- !.
 reali.gref {{:gref lib:elpi.pstring }} {{:gref lib:elpi.derive.is_pstring }} :- !.
 
+reali (pglobal GR _) T :-
+  reali.gref GR GTR, !,
+  coq.env.global GTR T.
+
 :name "reali:fail"
 reali X _ :-
   M is "derive.param1: No unary parametricity translation for " ^

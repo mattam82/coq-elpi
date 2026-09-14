@@ -1161,6 +1161,9 @@ external func coq.univ.variable.of-term term -> coq.univ.variable.set.
 kind univ-instance type.
 
 
+% [coq.empty-univ-instance? UI] is the univ instance empty
+external func coq.empty-univ-instance? univ-instance.
+
 % [coq.univ-instance UI UL] relates a univ-instance UI and a list of
 % universes UL
 external func coq.univ-instance -> univ-instance, list univ.

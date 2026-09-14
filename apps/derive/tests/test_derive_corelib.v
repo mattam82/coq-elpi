@@ -7,7 +7,7 @@ Module Coverage.
 
 Inductive empty@{} := .
 
-Inductive mempty := with mempty' := .
+Monomorphic Inductive mempty := with mempty' := .
 
 Inductive unit := tt.
 
@@ -33,7 +33,7 @@ Inductive rose_p (A B : Type) := Leafp (p : pair A B) | Nodep (sib : pair (rose_
 
 Inductive rose_o (A : Type) := Leafo (a : A) | Nodeo (x: pair (rose A) (rose A)) (sib : option (seq (rose A))).
 
-Inductive mtree (A : Type) := mLeaf (a : A) | mNode (_ : mforest A) with mforest (A : Type) := mEnd | mTree (_ : mtree A) (_ : mforest A).
+Monomorphic Inductive mtree (A : Type) := mLeaf (a : A) | mNode (_ : mforest A) with mforest (A : Type) := mEnd | mTree (_ : mtree A) (_ : mforest A).
 
 Inductive nest A := NilN | ConsN (x : A) (xs : nest (pair A A)).
 
@@ -50,7 +50,7 @@ Inductive zeta Sender (Receiver := Sender) := Envelope (a : Sender) (ReplyTo := 
 Inductive beta (A : (fun x : Type => x) Type) := Redex (a : (fun x : Type => x) A).
 
 Inductive iota := Why n (a : match n in peano return Type with Zero => peano | Succ _ => unit end).
-Inductive large :=
+Monomorphic Inductive large :=
 | K1 (_ : unit) 
 | K2 (_ : unit) (_ : unit) 
 | K3 (_ : unit) (_ : unit) (_ : unit) 

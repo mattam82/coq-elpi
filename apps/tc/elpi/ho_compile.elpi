@@ -383,7 +383,8 @@ namespace tc {
       pred unif-univ-constraint term, term.
       unif-univ-constraint T1 T2 :- declare_constraint (tc.link.univ-poly T1 T2) [_].
 
-      % decompile-problematic-term (pglobal P (pr [] []) as T) L T L :- !.
+      decompile-problematic-term (pglobal P UI as T) L T L :- 
+        coq.empty-univ-instance? UI, !.
 
       decompile-problematic-term (pglobal P Q as T) L (pglobal P Q' as T') L' :-
         L' = [unif-univ-constraint T T' | L].

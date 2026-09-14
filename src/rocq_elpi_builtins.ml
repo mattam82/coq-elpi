@@ -3321,6 +3321,16 @@ term (of the instance it contains) with another one.|};
 
   MLData uinstance;
 
+  MLCode(Pred("coq.empty-univ-instance?",
+    In(B.ioarg uinstance, "UI",
+    Read(global, "is the univ instance empty")),
+   (fun ui ~depth {env} _ state ->      
+      match ui with
+      | Data ui ->
+        if UVars.Instance.is_empty ui then () 
+        else raise No_clause
+      | NoData -> raise No_clause)), DocAbove);
+  
   MLCode(Pred("coq.univ-instance",
     InOut(B.ioarg uinstance, "UI",
     InOut(B.ioarg (list B.(ioarg_poly "univ")), "UL",

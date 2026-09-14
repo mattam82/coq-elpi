@@ -1429,7 +1429,7 @@ let univ_of_sort = let open Sorts in function
 let univ_of_sort = Sorts.univ_of_sort
 [%%endif]
 
-[%%if coq = "9.3"]
+[%%if coq = "9.3" || coq = "9.4"]
 let purge_algebraic_univs_sort state s = state, EConstr.ESorts.kind (S.get engine state).sigma s
 [%%else]
 let purge_algebraic_univs_sort state s =
@@ -3624,7 +3624,7 @@ let comInductive_interp_mutual_inductive_constr ~cumulative ~poly ~template ~fin
   let env_ar = Environ.pop_rel_context (List.length ctx_params) env_ar_params in
   ComInductive.interp_mutual_inductive_constr ~indnames ~arities_explicit ~template_syntax ~flags ~env_ar ~ctx_params
 [%%else]
-let comInductive_interp_mutual_inductive_constr ~sigma ~cumulative ~poly ~template ~finite ~udecl ~variances ~ctx_params ~env_ar_params =
+let comInductive_interp_mutual_inductive_constr ~sigma ~cumulative ~poly ~template ~finite ~udecl ~variances ~ctx_params ~env_ar_params ~indnames =
   let poly = PolyFlags.make ~univ_poly:poly ~cumulative ~collapse_sort_variables:true in
   let poly = PolyFlags.set_solve_term_variables poly in
   let flags = {
@@ -3636,7 +3636,10 @@ let comInductive_interp_mutual_inductive_constr ~sigma ~cumulative ~poly ~templa
   }
   in
   let udecl = { udecl with UState.univdecl_variances = variances } in
-  ComInductive.interp_mutual_inductive_constr ~sigma ~arities_explicit:[true] ~template_syntax:[SyntaxAllowsTemplatePoly] ~flags ~udecl ~env_ar_params ~ctx_params
+  let arities_explicit = List.map (fun _ -> true) indnames in
+  let template_syntax = List.map (fun _ -> ComInductive.SyntaxAllowsTemplatePoly) indnames in
+
+  ComInductive.interp_mutual_inductive_constr ~sigma ~indnames ~arities_explicit ~template_syntax ~flags ~udecl ~env_ar_params ~ctx_params
 [%%endif]
 
 [%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
@@ -3887,6 +3890,7 @@ let lp2inductive_entry ~depth coq_ctx constraints state t =
       let env_ar_params =
         let env_ar = List.fold_left (fun env ind_type -> EC.push_rel ind_type env) (Global.env ()) ind_types in
         EC.push_rel_context params env_ar in
+      (* No longer needed in rocq-univs
       let state = minimize_universes state in
       let used =
         List.fold_left (fun acc t ->
@@ -3903,8 +3907,8 @@ let lp2inductive_entry ~depth coq_ctx constraints state t =
               Univ.Level.Set.union acc
                 (Univ.Level.Set.union (universes_of_term state t) (universes_of_term state b))
           | LocalAssum(_,t) -> Univ.Level.Set.union acc (universes_of_term state t))
-          used params in
-      let sigma = restricted_sigma_of used state in
+          used params in *)
+      let sigma = get_sigma state in
       state, comInductive_interp_mutual_inductive_constr
         ~sigma
         ~template:(Some false)

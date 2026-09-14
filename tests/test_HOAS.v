@@ -936,7 +936,7 @@ Inductive i1 (A: Type) (B : Type) : (forall x : nat, x + 1 = x) -> Prop :=
 with i2 (A:Type) (B : Type) : Type := K21.
 
 Elpi Query lp:{{
-  {{ i1 }} = global (indt I),
+  {{ i1 }} = pglobal (indt I) _,
   coq.env.indt-block I tt NP NUP [I,I2] SL KNL KTL,
   std.assert! (NP = 2) "NP",
   std.assert! (NUP = 2) "NUP",
@@ -972,7 +972,7 @@ Elpi Query lp:{{
   coq.string->name-irrelevant "n" Nwrong,
   coq.string->name-relevant "p" Pwrong,
   coq.typecheck-relevance
-    (prod Nwrong {{ nat }} _\ prod Pwrong (global (indt ST)) _\ {{ nat }}) T,
+    (prod Nwrong {{ nat }} _\ prod Pwrong {coq.env.global (indt ST)} _\ {{ nat }}) T,
   T = prod Nfixed _ F, pi n\
   F n = prod Pfixed _ _,
   coq.name.relevant? Nfixed Rn,

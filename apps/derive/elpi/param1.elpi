@@ -181,7 +181,7 @@ build-and-accumulate-clauses [raw-mindt-spec GR _ _ _ KNames _ _|Raws] [RealGR|R
   map2 KNames RealKNames (a\ b\ r\ r = (reali.gref (indc a) (indc b) :- !)) CK,
   CDone = reali-done (indt GR),
   CReali = (reali.gref (indt GR) (indt RealGR) :- !),
-  CRealiR = (realiR (pglobal (indt GR) _) (pglobal (indt RealGR) _) :- !),
+  CRealiR = (pi u1 u2\ realiR (pglobal (indt GR) u1) (pglobal (indt RealGR) u2) :- !),
   coq.elpi.accumulate _ "derive.param1.db" (clause _ _ CDone),
   coq.elpi.accumulate _ "derive.param1.db" (clause _ (before "realiR:fail") CRealiR),
   std.forall [CReali|CK] (x\coq.elpi.accumulate _ "derive.param1.db" (clause _ (before "reali:fail") x)),

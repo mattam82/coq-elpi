@@ -200,8 +200,8 @@ type mutual-spec inductive -> term -> term -> term -> term -> mutual-spec.
 
 func mutual-spec inductive -> mutual-spec.
 mutual-spec GR (mutual-spec GRR T T Arity Arity) :-
-  reali {coq.env.global (indt GR)} {coq.env.global (indt GRR)},
-  coq.env.global (indt GRR) T,
+  reali (pglobal (indt GR) _) T,
+  T = pglobal (indt GRR) Ui,
   coq.env.indt GRR _ _ _ Arity _ _.
 
 func mutual-spec-ind mutual-spec -> inductive.
@@ -488,16 +488,13 @@ main-mutual GRS Suffix C :- std.do! [
 
 func main1 gref, gref, string -> list prop.
 main1 _ (indt GR) Suffix C :- do! [
-  coq.env.indt GR _Ind Lno Luno Arity _ _,
-  assert! (Lno = Luno) "derive.param1.functor: Non-uniform parameters not supported",
-
   % generate map and add to the env
   coq.env.global (indt GR) T,
   T = pglobal _ Ui,
   @uinstance! Ui ==> coq.env.indt GR _Ind Lno Luno Arity _ _,
   assert! (Lno = Luno) "derive.param1.functor: Non-uniform parameters not supported",
 
-  bo-params 0 Lno T T Arity Arity [] R,
+  bo-params 0 Lno T T Arity Arity [] R,  
   std.assert-ok! (coq.typecheck R Rty) "derive.param1_functor generates illtyped term",
 
   Name is {coq.gref->id (indt GR)} ^ Suffix,
