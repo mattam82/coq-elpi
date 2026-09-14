@@ -1,4 +1,4 @@
-func eqK-db constructor -> term.
+func eqK-db constructor -> gref.
 
 :name "eqK-db:fail"
 eqK-db K _ :-

@@ -29,10 +29,11 @@ Elpi Accumulate Db derive.param1.trivial.db.
 Elpi Accumulate File param1_trivial.
 Elpi Accumulate lp:{{
   main [str I] :- coq.locate I IsGR, !,
-    realiR T {coq.env.global IsGR},
-    coq.env.global GR T,
+    std.spy-do! [ reali.gref GR IsGR,
+    %  T {coq.env.global IsGR},
+    % coq.env.global GR T,
     derive.param1.inhab.main GR IsGR "_inhab" CL,
-    CL =!=> derive.param1.trivial.main GR IsGR "_trivial" _.
+    CL =!=> derive.param1.trivial.main GR IsGR "_trivial" _ ].
   main _ :- usage.
 
   usage :-
@@ -127,7 +128,7 @@ Definition is_float64_trivial : trivial PrimFloat.float is_float64 :=
     (fun y => match y with float64 i => eq_refl end).
 Register is_float64_trivial as elpi.derive.is_float64_trivial.
 
-Definition is_pstring_trivial : trivial lib:elpi.pstring is_pstring :=
+Definition is_pstring_trivial : trivial PrimString.string is_pstring :=
   fun x => contracts _ is_pstring x (is_pstring_inhab x)
     (fun y => match y with pstring i => eq_refl end).
 Register is_pstring_trivial as elpi.derive.is_pstring_trivial.

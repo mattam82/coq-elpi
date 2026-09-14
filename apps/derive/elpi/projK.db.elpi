@@ -1,4 +1,4 @@
-func projK-db constructor -> int, term.
+func projK-db constructor -> int, gref.
 
 :name "projK-db:fail"
 projK-db GR N _ :-

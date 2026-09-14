@@ -9,6 +9,8 @@ From elpi.apps.derive.elpi Extra Dependency "param1.db.elpi" as param1db.
 From elpi Require Import elpi.
 From elpi.apps Require Import derive.
 
+Unset Universe Polymorphism.
+
 Definition contractible T := { x : T & forall y, @eq T x y }.
 
 Register contractible as elpi.derive.contractible.
@@ -62,6 +64,14 @@ reali {{ lib:num.int63.type }} {{ lib:elpi.derive.is_uint63 }} :- !.
 reali {{ lib:num.float.type }} {{ lib:elpi.derive.is_float64 }} :- !.
 reali {{ lib:elpi.pstring }} {{ lib:elpi.derive.is_pstring }} :- !.
 
+reali.gref {{:gref lib:num.int63.type }} {{:gref lib:elpi.derive.is_uint63 }} :- !.
+reali.gref {{:gref lib:num.float.type }} {{:gref lib:elpi.derive.is_float64 }} :- !.
+reali.gref {{:gref lib:elpi.pstring }} {{:gref lib:elpi.derive.is_pstring }} :- !.
+
+reali (global GR _) T :-
+  reali.gref GR GTR, !,
+  coq.env.global GTR T.
+
 :name "reali:fail"
 reali X _ :-
   M is "derive.param1: No unary parametricity translation for " ^
@@ -72,11 +82,17 @@ realiR {{ lib:num.int63.type }} {{ lib:elpi.derive.is_uint63 }} :- !.
 realiR {{ lib:num.float.type }} {{ lib:elpi.derive.is_float64 }} :- !.
 realiR {{ lib:elpi.pstring }} {{ lib:elpi.derive.is_pstring }} :- !.
 
+realiR T (global GTR _) :-
+  reali.gref GR GTR, !,
+  coq.env.global GR T.
+
 :name "realiR:fail"
 realiR T TR :-
   M is "derive.param1: No unary parametricity translation linking " ^
           {coq.term->string T} ^ " and " ^ {coq.term->string TR},
   stop M.
+
+
 }}.
 
 (* standalone *)
@@ -115,9 +131,8 @@ Elpi Accumulate derive Db derive.param1.db.
 }}.
 
 Elpi Accumulate derive lp:{{
-  
 func derive.on_param1 gref, (func gref, gref, string -> list (pred)), string -> list (pred).
-derive.on_param1 GR F N C :- reali (global GR) (global P), !, F GR P N C.
+derive.on_param1 GR F N C :- reali.gref GR P, !, F GR P N C.
 
 derivation T N ff (derive "param1" (derive.param1.main T N ) (reali-done T)).
 

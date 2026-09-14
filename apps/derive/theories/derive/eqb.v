@@ -11,8 +11,8 @@ From elpi.apps.derive.elpi Extra Dependency "eqb.db.elpi" as eqbdb.
 From elpi.apps.derive.elpi Extra Dependency "fields.db.elpi" as fieldsdb.
 From elpi.apps.derive.elpi Extra Dependency "tag.db.elpi" as tagdb.
 
-Require Import eqb_core_defs.
-Require Import eqType_ast tag fields.
+From elpi.apps Require Import eqb_core_defs.
+From elpi.apps Require Import eqType_ast tag fields.
 
 Register eqb_body as elpi.derive.eqb_body.
 

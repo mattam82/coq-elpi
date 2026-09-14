@@ -6,6 +6,8 @@ From elpi.apps.derive Require Export lens.
 From elpi.apps Require Export coercion.
 Require ssr.ssrfun.
 
+Unset Universe Polymorphism.
+About over.
 Inductive unresolved_record :=
   | Stop 
   | More (T : Type) : T -> unresolved_record -> unresolved_record.
@@ -37,7 +39,6 @@ Notation "« x 'with' l .= v »" := (With _ x (Label _ _ l%lbl v) : With _ x (La
 Elpi Accumulate coercion Db derive.lens.db.
 
 Elpi Accumulate coercion File rbuild.
-
 
 Elpi Accumulate coercion.db lp:{{
 

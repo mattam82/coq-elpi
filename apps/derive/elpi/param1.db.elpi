@@ -1,4 +1,5 @@
 :index(3)
 func reali term -> term.
 type realiR term -> term -> prop.
+type reali.gref gref -> gref -> prop.
 pred reali-done gref.

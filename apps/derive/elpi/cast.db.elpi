@@ -1,1 +1,1 @@
-func cast-db int -> term. 
+func cast-db int -> gref.
