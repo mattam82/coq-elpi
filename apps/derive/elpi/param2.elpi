@@ -429,6 +429,8 @@ param-record-constr C NParams Ty CR Bo TyR :-
   coq.subst-fun [T, T] TyRUnsubst TyR,
 
   % Sanity check that the type of the shim has the type expected of a translation
+  std.assert-ok! (coq.typecheck-ty TyR _)
+    "param-record-constr: Ill-typed translated constructor shim",
   std.assert-ok! (coq.typecheck Bo TyR)
     "param-record-constr: Ill-typed translated constructor shim".
 
