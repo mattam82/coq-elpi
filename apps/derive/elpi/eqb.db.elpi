@@ -7,6 +7,11 @@ pred eqb-for
   o:term, % type2
   o:term. % comparison function
 
+pred eqb-for.ref
+  o:gref, % type1
+  o:gref, % type2
+  o:gref. % comparison function
+
 pred eqb-fields
   o:term, % type1
   o:term, % type2
@@ -18,4 +23,10 @@ eqb-for {{ lib:elpi.pstring }} {{ lib:elpi.pstring }} {{ lib:elpi.pstring_eqb }}
 
 :name "eqb-for:whd"
 eqb-for T1 T2 X :- whd1 T1 T1', !, eqb-for T1' T2 X. 
-eqb-for T1 T2 X :- whd1 T2 T2', !, eqb-for T1 T2' X. 
+eqb-for T1 T2 X :- whd1 T2 T2', !, eqb-for T1 T2' X.
+
+eqb-for T1 T2 X :-
+  coq.env.global GR1 T1,
+  coq.env.global GR2 T2,
+  eqb-for.ref GR1 GR2 GRE,
+  coq.env.global GRE X.

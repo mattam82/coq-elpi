@@ -98,3 +98,9 @@ End example6.
 
 Fail #[no_alias]
 derive Inductive peano := Zero | Succ (p : peano).
+
+(* A variant with a single constant constructor is declared in Prop: its equality test is derived
+   all the same *)
+#[only(eqbOK)] derive
+Variant prop_singleton := PropSingleton.
+Check prop_singleton_eqb_OK : forall x y : prop_singleton, reflect (x = y) (prop_singleton_eqb x y).

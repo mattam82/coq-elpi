@@ -1,4 +1,4 @@
-func isK-db constructor -> term.
+func isK-db constructor -> gref.
 
 :name "isK-db:fail"
 isK-db K _ :-

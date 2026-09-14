@@ -1,4 +1,4 @@
-pred induction-db inductive -> term.
+pred induction-db inductive -> gref.
 
 :name "induction-db:fail"
 induction-db T _ :-

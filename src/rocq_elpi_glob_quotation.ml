@@ -381,6 +381,16 @@ let gterm2lpast ~pattern ~language state glob =
     let v = A.Term.mkBound ~loc ~language @@ name_of_id @@ Context.binder_name name in
     in_elpiast_def ~loc ~v (Context.map_annot (fun x -> Name.Name x) name) ~ty ~bo
 
+  (* [has_empty_instance gr] holds when [gr] is not universe polymorphic (template polymorphic
+     references have empty instances too), in the current environment: the one of the quotation
+     may not have the constants declared since, and a reference not found there keeps a
+     unification variable as instance *)
+  and has_empty_instance gr =
+    let env = Global.env () in
+    match Environ.is_polymorphic env gr with
+    | poly -> not poly
+    | exception e when CErrors.noncritical e -> false
+
   and gterm2lp state ({ CAst.loc; v } as x) : A.Term.t =
   debug Pp.(fun () ->
       str"gterm2lp:" ++ str " term=" ++Printer.pr_glob_constr_env (get_glob_env state).env (get_sigma state) x);
@@ -392,6 +402,11 @@ let gterm2lpast ~pattern ~language state glob =
       hd
   | GRef(gr, ul) when Global.is_polymorphic gr ->
     begin match ul with
+    | None when has_empty_instance gr ->
+      (* The instance of a reference which is not universe polymorphic is empty: it is not
+         left as a unification variable, so that quoted terms such as {{ bool }} are ground,
+         e.g. to be accumulated *)
+      in_elpiast_poly_gr_instance ~loc gr UVars.Instance.empty
     | None ->
       let s = A.Term.mkVar ~loc ~hdloc:loc (fresh_uv ()) [] in
       in_elpiast_poly_gr ~loc gr s

@@ -1,4 +1,4 @@
-func bcongr-db constructor -> term.
+func bcongr-db constructor -> gref.
 
 :name "bcongr-db:fail"
 bcongr-db K _ :-
