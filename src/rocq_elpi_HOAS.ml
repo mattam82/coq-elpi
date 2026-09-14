@@ -281,8 +281,9 @@ let isuniv, univout, univino, (univ : Univ.Universe.t API.Conversion.t) =
          (* flexible makes {{ Type }} = {{ Set }} also true when coq.unify-eq {{ Type }} {{ Set }} *)
          let state, (_,u) = new_univ_level_variable ~flexible:true state in
          let state = S.update um state (UM.add b u) in
-         let state, prune_ev = prune_uvar state b args in
-         state, u, [ prune_ev; API.Conversion.Unify(E.mkUnifVar b ~args state,univin u) ]
+         let state, b' = API.FlexibleData.Elpi.make state in
+         let uvar_pruned = E.mkUnifVar b' ~args:[] state in
+         state, u, [ API.Conversion.Unify (t, uvar_pruned); API.Conversion.Unify(uvar_pruned,univin u) ]
        end
     | _ -> univ_to_be_patched.API.Conversion.readback ~depth state t
   end
@@ -312,8 +313,7 @@ let universe_level_variable =
        with Not_found ->
          let state, (l,u) = new_univ_level_variable state in
          let state = S.update um state (UM.add b u) in
-         let state, prune_ev = prune_uvar state b args in
-         state, l, [ prune_ev; API.Conversion.Unify(E.mkUnifVar b ~args state,levelin l) ]
+         state, l, [ API.Conversion.Unify(E.mkUnifVar b ~args state,levelin l) ]
        end
     | _ -> universe_level_variable_to_patch.API.Conversion.readback ~depth state t
   end
@@ -2299,9 +2299,8 @@ let in_coq_poly_gref ~depth ~origin ~failsafe s t i =
         let s = S.update uim s (UIM.add b u) in
         let ue = uinstancein u in
         let s, b' = API.FlexibleData.Elpi.make s in
-        let s, prune_ev = prune_uvar s b args in
         let uvar_pruned = E.mkUnifVar b' ~args:[] s in
-        s, u, [prune_ev; API.Conversion.Unify (uvar_pruned,ue)]
+        s, u, [API.Conversion.Unify (i, uvar_pruned); API.Conversion.Unify (uvar_pruned,ue)]
       end
     | _ ->
       let s, ri, gls = uinstance.Elpi.API.Conversion.readback ~depth s i in
