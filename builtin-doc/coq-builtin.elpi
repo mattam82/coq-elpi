@@ -218,8 +218,7 @@ data term.
 builtin symb sort    : sort -> term. % Prop, Type@{i}
 
 % constants: inductive types, inductive constructors, definitions
-builtin symb global  : gref -> term.
-builtin symb pglobal : gref -> univ-instance -> term.
+builtin symb global : gref -> univ-instance -> term.
 
 % binders: to form functions, arities and local definitions
 builtin symb fun     : name -> term -> (term -> term) -> term.         % fun x : t =>
@@ -1125,6 +1124,9 @@ builtin func coq.univ.variable.of-term term -> coq.univ.variable.set.
 % Universes level instance for a universe-polymorphic constant
 data univ-instance.
 
+
+% [coq.empty-univ-instance? UI] is the univ instance empty
+external func coq.empty-univ-instance? univ-instance.
 
 % [coq.univ-instance UI UL] relates a univ-instance UI and a list of
 % universe level variables UL

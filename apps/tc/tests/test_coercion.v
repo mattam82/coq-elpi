@@ -6,9 +6,9 @@ Module Animals.
     Inductive info := Fly | NotFly.
 
     Class Animal (i : info).
-    
+  
     Class Bird (i : info) := IsAnimal :: Animal i.
-
+  
     Instance dove : Bird Fly. split. Qed.
 
     (* It exists a ground solution for tc-Animal *)
@@ -74,6 +74,7 @@ Module foo.
     Class C (i : nat) : Set := {
       f (x : A) :: B i
     }.
+
   End s.
 End foo.
 
