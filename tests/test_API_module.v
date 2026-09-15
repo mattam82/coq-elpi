@@ -1,5 +1,7 @@
 From elpi Require Import elpi.
 
+Unset Universe Polymorphism.
+
 Elpi Command modules.
 
 (* module *)
@@ -58,8 +60,8 @@ Elpi Query lp:{{
       coq.env.begin-module "B" none,
       coq.env.end-module _,
     coq.env.end-module _,
-   ]
-}} lp:{{
+   ] }}
+ lp:{{
  std.do! [
    coq.env.begin-module-type "TA",
      coq.env.add-axiom "z" {{nat}} _,
