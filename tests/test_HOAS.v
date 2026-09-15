@@ -1,5 +1,7 @@
 From elpi Require Import elpi.
 
+Unset Universe Polymorphism.
+
 Elpi Tactic test1.
 Elpi Accumulate lp:{{
 
@@ -66,21 +68,27 @@ Elpi Query lp:{{
   coq.env.end-section
 }}.
 
-Elpi Db univs.db lp:{{ pred u -> univ. }}.
+Polymorphic Definition ut@{u} : Type@{u} := Type.
+
+Elpi Db univs.db lp:{{
+   pred u o:univ.
+   pred ut o:term, o:univ.
+  }}.
 Elpi Command test_u.
 Elpi Accumulate Db univs.db.
 Elpi Query lp:{{
   coq.univ.new U,
-  coq.elpi.accumulate current "univs.db" (clause _ _ (u U))
+  coq.elpi.accumulate current "univs.db" (clause _ _ (u U)),
+  coq.elpi.accumulate current "univs.db" (clause _ _ (pi uinst\ ut (global {{:gref ut}} uinst) U))
 }}.
 
 Universe foo.
-
+Universe foo1.
+(* Elpi Print test_u "elpi.tests/test_u". *)
 Elpi Query lp:{{
   {{ Type@{foo} }} = sort (typ U),
-  coq.elpi.accumulate current "univs.db" (clause _ _ (u U))
+  u U, ut {{ ut@{foo} }} U
 }}.
-
 
 Axiom B : bool -> Type.
 Axiom N : nat -> Type.
@@ -323,7 +331,7 @@ Elpi Query lp:{{
   coq.say {coq.term->string {{ toto }}}.
 }}.
 
-Polymorphic Record F (T : Type) := Build_F { t : T }.
+#[universes(polymorphic,cumulative=no)] Record F (T : Type) := Build_F { t : T }.
 Polymorphic Definition fnat : F nat := {| t := 0%nat |}.
 
 Elpi Query lp:{{
@@ -606,13 +614,14 @@ Elpi Query lp:{{
   coq.univ.print,
   coq.say "------------------",
   coq.typecheck Body Type ok,
+  coq.say ok,
   coq.univ.print,
 
   coq.univ.variable UX LX,
   coq.univ.variable UY LY,
   coq.univ.print,
-
-  @udecl! [LX,LY] ff [lt LX LY] ff =>
+  coq.univ.alg-super UX SLX,
+  @udecl! [LX,LY] ff [le SLX UY] ff =>
     coq.env.add-const "poly" Body Type _ _.
 
 /*
@@ -626,9 +635,8 @@ Elpi Query lp:{{
 */
 }}.
 
-Set Printing Universes.
 About poly.
-Check poly@{Set Type}.
+Check poly@{;0 1}. Print poly.
 About Box.
 
 Elpi Query lp:{{ 
@@ -665,7 +673,7 @@ Goal c S. Abort.
 Elpi Query lp:{{
   coq.typecheck-ty (sort (typ X)) A ok,
   A = typ TX,
-  not(coq.univ.alg-super X TX),
+  coq.univ.alg-super X TX,
   coq.say X ":" TX,
   (@keep-alg-univs! => coq.typecheck-ty (sort (typ Y)) B ok),
   B = typ TY,

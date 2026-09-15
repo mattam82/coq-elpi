@@ -57,10 +57,10 @@ Local Notation inlined_sub_rect :=
   (fun K K_S u => let (x, Px) as u return K u := u in K_S x Px).
 
 Unset Auto Template Polymorphism.
-Record is_SUB (T : Type) (P : T -> bool) (sub_sort : Type) := SubType {
+Record is_SUB@{t u} (T : Type@{t}) (P : T -> bool) (sub_sort : Type@{t}) := SubType {
     val : sub_sort -> T;
     Sub : forall x, P x = true -> sub_sort;
-    Sub_rect : forall K (_ : forall x Px, K (@Sub x Px)) u, K u;
+    Sub_rect : forall (K : _ -> Type@{u}) (_ : forall x Px, K (@Sub x Px)) u, K u;
     (* SubK : forall x Px, val (@Sub x Px) = x *)
 }.
 Axiom leq : nat -> nat -> bool.
@@ -69,7 +69,6 @@ Structure ord u := Ord { oval : nat; prop : leq oval u = true }.
 
 Check fun u => SubType _ _ _ (oval u) _ inlined_sub_rect.
 
-Set Debug "elpi".
 Elpi Query lp:{{ std.do! [
   coq.say "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
   T = {{ fun u => SubType _ _ _ (oval u) _ inlined_sub_rect }},
