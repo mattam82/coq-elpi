@@ -95,6 +95,18 @@ let um = S.declare_component ~name:"rocq-elpi:evar-univ-map" ~descriptor:interp_
   ~pp:UM.pp ~init:(fun () -> UM.empty) ~start:(fun x -> x) ()
 
 
+
+(* map from Elpi evars to Qualities *)
+module QM = F.Map(struct
+  type t = Sorts.Quality.t
+  let compare = Sorts.Quality.compare
+  let show x = Pp.string_of_ppcmds @@ Sorts.Quality.raw_pr x
+  let pp fmt x = Format.fprintf fmt "%a" Pp.pp_with (Sorts.Quality.raw_pr x)
+end)
+
+let qm = S.declare_component ~name:"rocq-elpi:evar-quality-map" ~descriptor:interp_state
+  ~pp:QM.pp ~init:(fun () -> QM.empty) ~start:(fun x -> x) ()
+
 let constraint_leq u1 u2 =
   let open UnivProblem in
   ULe (u1, u2)
@@ -170,10 +182,16 @@ let add_universe_constraint state c =
       raise API.BuiltInPredicate.No_clause
 [%%endif]
 
-let new_univ_level_variable ?(flexible=false) state =
+let new_quality_variable state =
   S.update_return (Option.get !pre_engine) state (fun ({ sigma } as e) ->
     (* ~name: really mean the universe level is a binder as in Definition f@{x} *)
-    let rigidity = if flexible then UState.univ_flexible_alg else UState.univ_rigid in
+    let sigma, q = Evd.new_quality_variable ?name:None sigma in
+    { e with sigma }, Sorts.Quality.QVar q)
+
+let new_univ_level_variable ?(flexible=true) state =
+  S.update_return (Option.get !pre_engine) state (fun ({ sigma } as e) ->
+    (* ~name: really mean the universe level is a binder as in Definition f@{x} *)
+    let rigidity = if flexible then UState.univ_flexible else UState.univ_rigid in
     let sigma, v = Evd.new_univ_level_variable ?name:None rigidity sigma in
     let u = Univ.Universe.make v in
     (*
@@ -182,7 +200,57 @@ let new_univ_level_variable ?(flexible=false) state =
 *)
     { e with sigma }, (v, u))
 
+let fresh_instance ?(flexible=true) state gr =
+  S.update_return (Option.get !pre_engine) state (fun ({ sigma; global_env = env } as e) ->
+    (* ~name: really mean the universe level is a binder as in Definition f@{x} *)
+    let rigidity = if flexible then UState.univ_flexible else UState.univ_rigid in
+    let sigma, v = Evd.fresh_global ~rigid:rigidity env sigma gr in
+    let _, u = EConstr.destRef sigma v in    
+    { e with sigma }, EConstr.EInstance.kind sigma u)
+
+(* 
+
+  type constant = QProp | QSProp | QType
+  type t = QVar of QVar.t | QConstant of constant | QGlobal of QGlobal.t
+*)
+
+(* We patch data_of_cdata by forcing all output qualities that
+ * are unification variables to be a Roccq quality variable, so that
+ * we can always call Rocq's API *)
+let isquality, qualityout, qualityino, (quality : Sorts.Quality.t API.Conversion.t) =
+  let { CD.cin = qualityin; cino = qualityino; isc = isquality; cout = qualityout }, quality_to_be_patched = CD.declare {
+    CD.name = "quality";
+    doc = "sort quality";
+    pp = (fun fmt x ->
+      let s = Pp.string_of_ppcmds (Sorts.Quality.raw_pr x) in
+      Format.fprintf fmt "«%s»" s);
+    compare = (fun _ _ -> 0);
+    hash = (fun _ -> 0) (* Sorts.Quality.hash *);
+    hconsed = false;
+    constants = [];
+  } in
+  (* turn UVars into fresh qualities *)
+  isquality, qualityout, qualityino, { quality_to_be_patched with
+  API.Conversion.readback = begin fun ~depth state t ->
+    match E.look ~depth t with
+    | E.UnifVar (b,args) ->
+       let m = S.get qm state in
+       begin try
+         let u = QM.host b m in
+         state, u, []
+       with Not_found ->
+         (* flexible makes {{ Type }} = {{ Set }} also true when coq.unify-eq {{ Type }} {{ Set }} *)
+         let state, q = new_quality_variable state in
+         let state = S.update qm state (QM.add b q) in
+         let state, b' = API.FlexibleData.Elpi.make state in
+         let qvar_pruned = E.mkUnifVar b' ~args:[] state in
+         state, q, [ API.Conversion.Unify (t, qvar_pruned); API.Conversion.Unify(qvar_pruned,qualityin q) ]
+       end
+    | _ -> quality_to_be_patched.API.Conversion.readback ~depth state t
+  end
+}
     
+
 (* We patch data_of_cdata by forcing all output universes that
  * are unification variables to be a Coq universe variable, so that
  * we can always call Coq's API *)
@@ -193,8 +261,10 @@ let isuniv, univout, univino, (univ : Univ.Universe.t API.Conversion.t) =
     pp = (fun fmt x ->
       let s = Pp.string_of_ppcmds (Univ.Universe.pr UnivNames.pr_level_with_global_universes x) in
       Format.fprintf fmt "«%s»" s);
-    compare = Univ.Universe.compare;
-    hash = Univ.Universe.hash;
+    compare = (fun _ _ -> 0); 
+      (* Univ.Universe.compare; *)
+    hash = (fun _ -> 0); 
+    (* Univ.Universe.hash; *)
     hconsed = false;
     constants = [];
   } in
@@ -211,8 +281,9 @@ let isuniv, univout, univino, (univ : Univ.Universe.t API.Conversion.t) =
          (* flexible makes {{ Type }} = {{ Set }} also true when coq.unify-eq {{ Type }} {{ Set }} *)
          let state, (_,u) = new_univ_level_variable ~flexible:true state in
          let state = S.update um state (UM.add b u) in
-         let state, prune_ev = prune_uvar state b args in
-         state, u, [ prune_ev; API.Conversion.Unify(E.mkUnifVar b ~args state,univin u) ]
+         let state, b' = API.FlexibleData.Elpi.make state in
+         let uvar_pruned = E.mkUnifVar b' ~args:[] state in
+         state, u, [ API.Conversion.Unify (t, uvar_pruned); API.Conversion.Unify(uvar_pruned,univin u) ]
        end
     | _ -> univ_to_be_patched.API.Conversion.readback ~depth state t
   end
@@ -242,8 +313,7 @@ let universe_level_variable =
        with Not_found ->
          let state, (l,u) = new_univ_level_variable state in
          let state = S.update um state (UM.add b u) in
-         let state, prune_ev = prune_uvar state b args in
-         state, l, [ prune_ev; API.Conversion.Unify(E.mkUnifVar b ~args state,levelin l) ]
+         state, l, [ API.Conversion.Unify(E.mkUnifVar b ~args state,levelin l) ]
        end
     | _ -> universe_level_variable_to_patch.API.Conversion.readback ~depth state t
   end
@@ -276,21 +346,18 @@ let dest_udecl ({ UState.univdecl_instance ; univdecl_constraints } : UState.uni
 let universe_constraint : univ_cst API.Conversion.t =
   let open API.Conversion in let open API.AlgebraicData in declare {
   ty = TyName "univ-constraint";
-  doc = "Constraint between two universes level variables";
+  doc = "Constraint between two universes";
   pp = (fun fmt _ -> Format.fprintf fmt "<todo>");
   constructors = [
-    K("lt","",A(universe_level_variable,A(universe_level_variable,N)),
-      B (fun u1 u2 -> (u1,univ_lt,u2)),
-      M (fun ~ok ~ko -> function (l1,Univ.Lt,l2) -> ok l1 l2 | _ -> ko ()));
-    K("le","",A(universe_level_variable,A(universe_level_variable,N)),
-      B (fun u1 u2 -> (u1,univ_le,u2)),
+    K("le","",A(univ,A(univ,N)),
+      B (fun u1 u2 -> (u1,Univ.Le,u2)),
       M (fun ~ok ~ko -> function (l1,Univ.Le,l2) -> ok l1 l2 | _ -> ko ()));
-    K("eq","",A(universe_level_variable,A(universe_level_variable,N)),
-      B (fun u1 u2 -> (u1,univ_eq,u2)),
+    K("eq","",A(univ,A(univ,N)),
+      B (fun u1 u2 -> (u1,Univ.Eq,u2)),
       M (fun ~ok ~ko -> function (l1,Univ.Eq,l2) -> ok l1 l2 | _ -> ko ()))
   ]
 } |> API.ContextualConversion.(!<)
-[%%else]
+[%%elif "coq" = "9.2"]
 type univ_cst = Univ.UnivConstraint.t
 type univ_csts = Univ.UnivConstraints.t
 let univ_lt = Univ.UnivConstraint.Lt
@@ -331,8 +398,45 @@ let universe_constraint : univ_cst API.Conversion.t =
       M (fun ~ok ~ko -> function (l1,Univ.UnivConstraint.Eq,l2) -> ok l1 l2 | _ -> ko ()))
   ]
 } |> API.ContextualConversion.(!<)
-[%%endif]
+[%%else]
+type univ_cst = Univ.UnivConstraint.t
+type univ_csts = Univ.UnivConstraints.t
+let univ_le = Univ.UnivConstraint.Le
+let univ_eq = Univ.UnivConstraint.Eq
+let univ_csts_of_list = Univ.UnivConstraints.of_list
+let univ_csts_to_list = Univ.UnivConstraints.elements
+let evd_merge_ctx_set rigid = Evd.merge_sort_context_set rigid
+let subst_univs_constraints x = UVars.subst_univs_constraints x
+let univs_of_csts x = PConstraints.univs @@ UVars.UContext.constraints x
+let mk_universe_decl univdecl_extensible_instance univdecl_extensible_constraints univdecl_constraints univdecl_instance =
+  let open UState in
+  { univdecl_qualities = [];
+    univdecl_extensible_instance;
+    univdecl_elim_constraints = Sorts.ElimConstraints.empty;
+    univdecl_extensible_qualities = false;
+    univdecl_extensible_constraints;
+    univdecl_univ_constraints = univdecl_constraints;
+    univdecl_variances = None;
+    univdecl_instance; }
+let default_univ_decl = UState.default_univ_decl
+let dest_udecl ({ UState.univdecl_instance ; univdecl_univ_constraints } : UState.universe_decl) =
+  univdecl_instance, univdecl_univ_constraints
 
+let universe_constraint : univ_cst API.Conversion.t =
+  let open API.Conversion in let open API.AlgebraicData in declare {
+  ty = TyName "univ-constraint";
+  doc = "Constraint between two universes";
+  pp = (fun fmt _ -> Format.fprintf fmt "<todo>");
+  constructors = [
+    K("le","",A(univ,A(univ,N)),
+      B (fun u1 u2 -> (u1,univ_le,u2)),
+      M (fun ~ok ~ko -> function (l1,Univ.UnivConstraint.Le,l2) -> ok l1 l2 | _ -> ko ()));
+    K("eq","",A(univ,A(univ,N)),
+      B (fun u1 u2 -> (u1,univ_eq,u2)),
+      M (fun ~ok ~ko -> function (l1,Univ.UnivConstraint.Eq,l2) -> ok l1 l2 | _ -> ko ()))
+  ]
+} |> API.ContextualConversion.(!<)
+[%%endif]
 
 let universe_variance : (Univ.Level.t * UVars.Variance.t option) API.Conversion.t =
   let open API.Conversion in let open API.AlgebraicData in declare {
@@ -350,22 +454,27 @@ let universe_variance : (Univ.Level.t * UVars.Variance.t option) API.Conversion.
       B (fun u -> u,Some UVars.Variance.Invariant),
       M (fun ~ok ~ko -> function (u,Some UVars.Variance.Invariant) -> ok u | _ -> ko ()));
     K("irrelevant","",A(universe_level_variable,N),
-      B (fun u -> u,Some UVars.Variance.Invariant),
+      B (fun u -> u,Some UVars.Variance.Irrelevant),
       M (fun ~ok ~ko -> function (u,Some UVars.Variance.Irrelevant) -> ok u | _ -> ko ()));
   ]
 } |> API.ContextualConversion.(!<)
-
+  
 type universe_decl = (Univ.Level.t list * bool) * (univ_csts * bool)
-type universe_decl_cumul = ((Univ.Level.t * UVars.Variance.t option) list  * bool) * (univ_csts * bool)
+type universe_decl_cumul = ((Univ.Level.t * UVars.Variance.t option) list * bool) * (univ_csts * bool)
 
 type any_universe_decl =
   | NonCumul of universe_decl
   | Cumul of universe_decl_cumul
 
+type universe_decl_option =
+  | NotUniversePolymorphic
+  | Cumulative of universe_decl_cumul
+  | NonCumulative of universe_decl
+
 let universe_decl : any_universe_decl API.Conversion.t =
   let open API.Conversion in let open API.BuiltInData in let open API.AlgebraicData in let open Elpi.Builtin in declare {
   ty = TyName "upoly-decl";
-  doc = "Constraints for a non-cumulative declaration. Boolean tt means loose (e.g. the '+' in f@{u v + | u < v +})";
+  doc = "Constraints for a polymorphic declaration. Boolean tt means loose (e.g. the '+' in f@{u v + | u < v +})";
   pp = (fun fmt _ -> Format.fprintf fmt "<todo>");
   constructors = [
     K("upoly-decl","",A(list universe_level_variable,A(bool,A(list universe_constraint,A(bool,N)))),
@@ -376,6 +485,18 @@ let universe_decl : any_universe_decl API.Conversion.t =
      M (fun ~ok ~ko -> function Cumul ((x,sx),(y,sy)) -> ok x sx (univ_csts_to_list y) sy | NonCumul _ -> ko ()))
   ]
 } |> API.ContextualConversion.(!<)
+
+let collapse_to_type_sigma sigma s =
+  match s with
+  | Sorts.VSort (q, u) ->
+    let sigma = Evd.set_eq_qualities sigma (Sorts.Quality.QVar q) Sorts.Quality.qtype in
+    sigma, Sorts.make Sorts.Quality.qtype u
+  | x -> sigma, s
+
+let collapse_to_type_state state s = 
+    S.update_return (Option.get !pre_engine) state (fun ({ sigma } as x) ->
+      let sigma, s = collapse_to_type_sigma sigma s in
+      { x with sigma }, s)
 
 (* All in one data structure to represent the Coq context and its link with
    the elpi one:
@@ -402,10 +523,7 @@ type uinstanceoption =
     (* a concrete instance was provided, the command will use it *)
   | VarInstance of (F.Elpi.t * E.term list * inv_rel_key)
     (* a variable was provided, the command will compute the instance to unify with it *)
-type universe_decl_option =
-  | NotUniversePolymorphic
-  | Cumulative of universe_decl_cumul
-  | NonCumulative of universe_decl
+
 type options = {
   hoas_holes : hole_mapping option;
   local : bool option;
@@ -425,6 +543,7 @@ type options = {
   no_tc: bool option;
   algunivs : bool option;
 }
+
 let default_options () = {
   hoas_holes = Some Verbatim;
   local = None;
@@ -442,7 +561,7 @@ let default_options () = {
   keepunivs = None;
   redflags = None;
   no_tc = None;
-  algunivs = None;
+  algunivs = Some true;
 }
 let make_options ~hoas_holes ~local ~warn ~depr ~primitive ~failsafe ~ppwidth
   ~pp ~pplevel ~using ~inline ~uinstance ~universe_decl ~reversible ~keepunivs
@@ -518,6 +637,7 @@ let sort : (Sorts.t, _ conv_context, API.Data.constraints) API.ContextualConvers
   );
   pp = ppsort;
   embed = (fun ~depth { options } _ state s ->
+    let state, s = collapse_to_type_state state s in (* FIXME? Not handling sort poly here *)
     match s with
     | Sorts.Prop -> state, E.mkConst propc, []
     | Sorts.SProp -> state, E.mkConst spropc, []
@@ -541,7 +661,7 @@ let sort : (Sorts.t, _ conv_context, API.Data.constraints) API.ContextualConvers
           let u = UM.host k m in
           state, Sorts.sort_of_univ u, []
         with Not_found ->
-          let state, (_,u) = new_univ_level_variable state in
+          let state, (_,u) = new_univ_level_variable ~flexible:true state in
           let state = S.update um state (UM.add k u) in
           state, Sorts.sort_of_univ u, []
         end
@@ -636,13 +756,49 @@ let subst_cdata subst c =
 let compare_instances x y =
   let qx, ux = UVars.Instance.to_array x
   and qy, uy = UVars.Instance.to_array y in
-  Util.Compare.(compare [(CArray.compare Sorts.Quality.compare, qx, qy); (CArray.compare Univ.Level.compare, ux, uy)])
+  Util.Compare.(compare [(CArray.compare Sorts.Quality.compare, qx, qy); (CArray.compare Univ.Universe.compare, ux, uy)])
 
 [%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
 let ppinst u = UVars.Instance.pr Sorts.QVar.raw_pr UnivNames.pr_level_with_global_universes u
 [%%else]
 let ppinst u = UVars.Instance.pr Sorts.raw_printer u
 [%%endif]
+(* 
+let uinstance = Elpi.Builtin.pair (API.BuiltInData.list quality) (API.BuiltInData.list univ)
+
+let uinstance_to_list i =
+  let qvars, uvars = UVars.Instance.to_array i in
+  let qs = Array.to_list qvars in 
+  let us = Array.to_list uvars in
+  qs, us
+
+let uinstance_of_list (qs, us) =
+  let qs = Array.of_list qs in
+  let us = Array.of_list us in
+  UVars.Instance.of_array (qs, us)
+
+let uinstancein ~depth state i =
+  let i = uinstance_to_list i in
+  let state, i, gl = uinstance.API.Conversion.embed ~depth state i in
+  assert(gl = []);
+  state, i
+ 
+let uinstanceout ~depth state i =
+  let state, i, gls = uinstance.API.Conversion.readback ~depth state i in
+  state, uinstance_of_list i, gls
+
+let prc  = E.Constants.declare_global_symbol "pr"
+
+let uinstanceina ~loc x =
+  let qs, us = UVars.Instance.to_array x in
+  let qs = Array.to_list qs in
+  let qs = List.map (fun u -> A.mkOpaque ~loc @@ qualityino u) qs in
+  let qs = A.list_to_lp_list ~loc qs in
+  let us = Array.to_list us in
+  let us = List.map (fun u -> A.mkOpaque ~loc @@ univino u) us in
+  let us = A.list_to_lp_list ~loc us in
+  A.mkAppGlobal ~loc ~hdloc:loc prc qs [us]
+ *)
 
 let uinstancein, uinstanceino, isuinstance, uinstanceout, uinstance =
   let { CD.cin; cino; isc; cout }, uinstance = CD.declare {
@@ -657,8 +813,7 @@ let uinstancein, uinstanceino, isuinstance, uinstanceout, uinstance =
     constants = [];
   } in
   cin, cino, isc, cout, uinstance
-;;
-
+;; 
 let uinstanceina ~loc x = A.mkOpaque ~loc (uinstanceino x)
 
 let collect_term_variables ~depth t =
@@ -779,7 +934,7 @@ let in_elpiast_poly_gr_instance ~loc r i =
   let t = in_elpiast_gref ~loc r in
   let i = uinstanceina ~loc i in
   A.mkAppGlobal ~loc ~hdloc:loc globalc t [i]
-  
+
 let in_coq_gref ~depth ~origin ~failsafe s t =
   try
     let s, t, gls = gref.API.Conversion.readback ~depth s t in
@@ -987,6 +1142,20 @@ let parrayna ~loc x =    A.mkAppGlobal ~loc~hdloc:loc  primitivec (A.mkAppGlobal
 
 (* ********************************* }}} ********************************** *)
 
+[%%if coq = "9.0" || coq = "9.1"]
+let merge_universe_context_set rigid sigma uctx =
+  Evd.merge_context_set rigid sigma uctx
+let merge_ustate = Evd.merge_universe_context
+let from_ustate = Evd.from_ctx
+let set_ustate = Evd.set_universe_context 
+[%%else]
+let merge_universe_context_set rigid sigma uctx =
+  Evd.merge_universe_context_set rigid sigma uctx
+let merge_ustate = Evd.merge_ustate
+let from_ustate = Evd.from_ustate
+let set_ustate = Evd.set_ustate
+[%%endif]
+
 (* {{{ HOAS : Evd.evar_map -> elpi *************************************** *)
 
 module CoqEngine_HOAS : sig 
@@ -1024,12 +1193,12 @@ let show_coq_engine ?with_univs e = Format.asprintf "%a" (pp_coq_engine ?with_un
  let from_env_keep_univ_and_sigma ~uctx ~env0 ~env sigma0 =
    assert(env0 != env);
    let uctx = demote uctx sigma0 env in
-   from_env_sigma env (Evd.set_universe_context sigma0 uctx)
+   from_env_sigma env (set_ustate sigma0 uctx)
 
 let from_env_keep_univ_of_sigma ~uctx ~env0 ~env sigma0 =
    assert(env0 != env);
    let uctx = demote uctx sigma0 env in
-   from_env_sigma env (Evd.from_ctx uctx)
+   from_env_sigma env (from_ustate uctx)
  
  let init () =
    from_env (Global.env ())
@@ -1238,6 +1407,9 @@ let univ_of_sort = let open Sorts in function
 let univ_of_sort = Sorts.univ_of_sort
 [%%endif]
 
+[%%if coq = "9.3" || coq = "9.4"]
+let purge_algebraic_univs_sort state s = state, EConstr.ESorts.kind (S.get engine state).sigma s
+[%%else]
 let purge_algebraic_univs_sort state s =
   let sigma = (S.get engine state).sigma in
   match EConstr.ESorts.kind sigma s with
@@ -1245,6 +1417,8 @@ let purge_algebraic_univs_sort state s =
   | s ->
       let state, _, _, s = force_level_of_universe state (univ_of_sort s) in
       state, s
+  | x -> state, x
+[%%endif]
 
 let in_elpi_flex_sort t = E.mkApp sortc (E.mkApp typc t []) []
 let in_elpiast_flex_sort ~loc t =
@@ -1273,6 +1447,9 @@ let in_elpiast_sort ~loc state s =
 
 let get_sigma s = (S.get engine s).sigma
 let update_sigma s f = (S.update engine s (fun e -> { e with sigma = f e.sigma }))
+let update_return_sigma s f =
+  (S.update_return engine s (fun e -> let sigma, r = f e.sigma in
+   { e with sigma }, r))
 let get_global_env s = (S.get engine s).global_env
 
 let norm_array s (x,y,z) =
@@ -1472,6 +1649,46 @@ let reduction_flags = let open API.OpaqueData in let open RedFlags in declare {
 
 let get_optionc   = E.Constants.declare_global_symbol "get-option"
 
+let mk_cumulative_universe_decl ((lv, extlv), (csts, extcsts)) =
+  let udecl = mk_universe_decl extlv extcsts csts (List.map fst lv) in
+  { udecl with
+    UState.univdecl_variances = Some (List.map (fun (l, v) -> v) lv) }
+
+let default_universe_decl () =
+  let flags = Attributes.(parse poly_def []) in
+  if PolyFlags.univ_poly flags then
+    if PolyFlags.cumulative flags then Cumulative (([],true), (Univ.UnivConstraints.empty, true))
+    else NonCumulative (([], true), (Univ.UnivConstraints.empty, true))
+  else NotUniversePolymorphic
+
+(* An explicit udecl-cumul, udecl or mdecl in the hypotheses takes precedence over the global flags 
+   for universe polymorphism and cumulativity *)    
+
+let get_universe_decl state map =
+  match API.Data.StrMap.find_opt "coq:udecl-cumul" map, API.Data.StrMap.find_opt "coq:udecl" map with
+  | None, None -> 
+    (match API.Data.StrMap.find_opt "coq:mdecl" map with
+    | Some (b, depth) -> 
+      let _, b, _ = Elpi.Builtin.bool.API.Conversion.readback ~depth state b in
+      if b then NotUniversePolymorphic
+      else default_universe_decl ()
+    | None -> default_universe_decl ())
+  | Some _, Some _ -> err Pp.(str"Conflicting attributes: @udecl! and @udecl-cumul! (or @univpoly! and @univpoly-cumul!)")
+  | Some (t,depth), None ->
+      let _, ud, gl = universe_decl.Elpi.API.Conversion.readback ~depth state t in
+      assert (gl = []);
+      begin match ud with
+      | Cumul ud -> Cumulative ud
+      | NonCumul _ -> U.type_error "@udecl-cumul! containing a non-cumulative declaration"
+      end
+  | None, Some (t,depth) ->
+    let _, ud, gl = universe_decl.Elpi.API.Conversion.readback ~depth state t in
+    assert (gl = []);
+    begin match ud with
+    | NonCumul ud -> NonCumulative ud
+    | Cumul _ -> U.type_error "@udecl! containing a cumulative declaration"
+    end
+
 let get_options ~depth hyps state =
   let is_string ~depth t =
     match E.look ~depth t with
@@ -1554,25 +1771,6 @@ let get_options ~depth hyps state =
         let cats = unspec2opt cats |> empty2none in
         let note = unspec2opt note |> empty2none in
         Option.cata (fun note -> [make_warn ~note ?cats ()]) [] note in      
-  let get_universe_decl () =
-    match API.Data.StrMap.find_opt "coq:udecl-cumul" map, API.Data.StrMap.find_opt "coq:udecl" map with
-    | None, None -> NotUniversePolymorphic
-    | Some _, Some _ -> err Pp.(str"Conflicting attributes: @udecl! and @udecl-cumul! (or @univpoly! and @univpoly-cumul!)")
-    | Some (t,depth), None ->
-        let _, ud, gl = universe_decl.Elpi.API.Conversion.readback ~depth state t in
-        assert (gl = []);
-        begin match ud with
-        | Cumul ud -> Cumulative ud
-        | NonCumul _ -> U.type_error "@udecl-cumul! containing a non-cumulative declaration"
-        end
-    | None, Some (t,depth) ->
-      let _, ud, gl = universe_decl.Elpi.API.Conversion.readback ~depth state t in
-      assert (gl = []);
-      begin match ud with
-      | NonCumul ud -> NonCumulative ud
-      | Cumul _ -> U.type_error "@udecl! containing a cumulative declaration"
-      end
-    in
   let get_redflags_option () =
     match API.Data.StrMap.find_opt "coq:redflags" map with
     | None -> None
@@ -1596,7 +1794,7 @@ let get_options ~depth hyps state =
     let using = get_string_option "coq:using" in
     let inline = get_module_inline_option "coq:inline" in
     let uinstance = get_uinstance_option "coq:uinstance" in
-    let universe_decl = get_universe_decl () in
+    let universe_decl = get_universe_decl state map in
     let reversible = get_bool_option "coq:reversible" in
     let no_tc = get_bool_option "coq:no_tc" in
     let keepunivs = get_bool_option "coq:keepunivs" in
@@ -1742,7 +1940,7 @@ let mk_def ~depth name ~bo ~ty =
 
 let in_elpiast_def ~loc ~v name ~ty ~bo =
   A.mkAppGlobal ~loc ~hdloc:loc defc v [in_elpiast_name ~loc name;ty;bo]
-  
+
 let rec constr2lp coq_ctx ~calldepth ~depth state t =
   assert(depth >= coq_ctx.proof_len);
   let { sigma } = S.get engine state in
@@ -2020,14 +2218,6 @@ let mk_global state gr inst_opt = S.update_return engine state (fun x ->
       x, (EConstr.mkRef (gr,i), None)
 ) |> (fun (x,(y,z)) -> x,y,z)
 
-[%%if coq = "9.0" || coq = "9.1"]
-let merge_universe_context_set rigid sigma uctx =
-  Evd.merge_context_set rigid sigma uctx
-[%%else]
-let merge_universe_context_set rigid sigma uctx =
-  Evd.merge_universe_context_set rigid sigma uctx
-[%%endif]
-
 let body_of_constant state c inst_opt = S.update_return engine state (fun x ->
   match
     Global.body_of_constant_body (Library.indirect_accessor[@alert "-deprecated"]) (Environ.lookup_constant c x.global_env)
@@ -2040,7 +2230,7 @@ let body_of_constant state c inst_opt = S.update_return engine state (fun x ->
      let sigma = match priv with
      | Opaqueproof.PrivateMonomorphic () -> sigma
      | Opaqueproof.PrivatePolymorphic ctx ->
-      let ctx = Util.on_snd (subst_univs_constraints (snd (UVars.make_instance_subst inst))) ctx in
+      (* let ctx = Util.on_snd (subst_univs_constraints (snd (UVars.make_instance_subst inst))) ctx in MS: FIXME *)
       merge_universe_context_set Evd.univ_rigid sigma ctx
      in
      { x with sigma }, (Some (EConstr.of_constr bo), Some inst)
@@ -2055,10 +2245,9 @@ let evar_arity k state =
                    u < FOO.123
    even if u is a binder, and FOO.123 is not.
    Hence this is disabled. *)
-let minimize_universes state = state (*
+let minimize_universes state =
   S.update engine state (fun ({ sigma } as x) ->
     { x with sigma = Evd.minimize_universes sigma })
-*)
 
 let is_sort ~depth x =
   match E.look ~depth x with
@@ -2204,8 +2393,8 @@ let in_coq_poly_gref ~depth ~origin ~failsafe s t i =
         let u = UIM.host b m in
         s, u, []
       with Not_found ->
-        let u, ctx = UnivGen.fresh_global_instance (get_global_env s) t in
-        let s = update_sigma s (fun sigma -> evd_merge_ctx_set UState.univ_flexible_alg sigma ctx) in
+        let u, ctx = UnivGen.fresh_global_instance (get_global_env s) gr in
+        let s = update_sigma s (fun sigma -> Evd.merge_sort_context_set UState.univ_flexible sigma ctx) in
         let u =
           match C.kind u with
           | C.Const (_, u) -> u
@@ -2711,7 +2900,7 @@ and create_evar_unknown ~calldepth syntactic_constraints (coq_ctx : 'a conv_cont
       Printer.pr_rel_context_of env (get_sigma state));
 
   let state, (k, kty) = S.update_return engine state (fun ({ sigma } as e) ->
-    let sigma, (ty, _) = Evarutil.new_type_evar ~naming:(Namegen.IntroFresh (Names.Id.of_string "e")) env sigma Evd.univ_rigid in
+    let sigma, (ty, _) = Evarutil.new_type_evar ~naming:(Namegen.IntroFresh (Names.Id.of_string "e")) env sigma Evd.univ_flexible in
     let ty_key, _ = EConstr.destEvar sigma ty in
     if on_ty then
       { e with sigma }, (ty_key, None)
@@ -2781,10 +2970,10 @@ let grab_global_env ~uctx state =
     else
       let state = S.set engine state (CoqEngine_HOAS.from_env_keep_univ_and_sigma ~uctx ~env0 ~env (get_sigma state)) in
       state
-let grab_global_env_drop_univs_and_sigma state =
+let grab_global_env_drop_univs_and_sigma ?(force=false) state =
   let env0 = get_global_env state in
   let env = Global.env () in
-  if env == env0 then state
+  if not force && env == env0 then state
   else
     let state = S.set engine state (CoqEngine_HOAS.from_env_sigma env (Evd.from_env env)) in
     let state = UVMap.empty state in
@@ -2797,7 +2986,7 @@ let grab_global_env_drop_sigma state =
   else begin
     let sigma = get_sigma state in
     let ustate = Evd.ustate sigma in
-    let state = S.set engine state (CoqEngine_HOAS.from_env_sigma env (Evd.from_ctx ustate)) in
+    let state = S.set engine state (CoqEngine_HOAS.from_env_sigma env (from_ustate ustate)) in
     let state = UVMap.empty state in
     state
   end
@@ -3507,20 +3696,24 @@ let restricted_sigma_of s state =
   let sigma = get_sigma state in
   let ustate = Evd.ustate sigma in
   let ustate = UState.restrict_even_binders ustate s in
-  let ustate = UState.fix_undefined_variables ustate in
+  (* let ustate = UState.fix_undefined_variables ustate in *)
   let ustate = collapse ustate in
-  let sigma = Evd.set_universe_context sigma ustate in
+  let sigma = set_ustate sigma ustate in
   sigma
 
 let universes_of_term state t =
   let sigma = get_sigma state in
   snd (EConstr.universes_of_constr sigma t)
 
+let nf_evar state t =
+  let sigma = get_sigma state in
+  Evarutil.nf_evar sigma t
+
 let universes_of_udecl state udecl =
   let used1, csts = dest_udecl udecl in
   let used2 = List.map (fun (x,_,y) -> [x;y]) (univ_csts_to_list csts) in
   let used = List.fold_right Univ.Level.Set.add used1 Univ.Level.Set.empty in
-  let used = List.fold_right Univ.Level.Set.add (List.flatten used2) used in
+  let used = List.fold_right (fun x acc -> Univ.Level.Set.union (Univ.Universe.levels x) acc) (List.flatten used2) used in
   used
 
 let name_universe_level = ref 0
@@ -3534,25 +3727,23 @@ let name_universe_level state l =
         incr name_universe_level;
         let id = Id.of_string Printf.(sprintf "eu%d" !name_universe_level) in
         let ustate = UState.name_level l id ustate in
-        let sigma = Evd.set_universe_context e.sigma ustate in
+        let sigma = set_ustate e.sigma ustate in
         { e with sigma }, id
   )
 
-
 let poly_cumul_udecl_variance_of_options state options =
   match options.universe_decl with
-  | NotUniversePolymorphic -> state, false, false, default_univ_decl, [| |]
+  | NotUniversePolymorphic -> state, false, false, default_univ_decl, None
   | Cumulative ((univ_lvlt_var,univdecl_extensible_instance),(univdecl_constraints,univdecl_extensible_constraints)) ->
     let univdecl_instance, variance = List.split univ_lvlt_var in
     state, true, true,
     mk_universe_decl univdecl_extensible_instance univdecl_extensible_constraints univdecl_constraints univdecl_instance,
-    Array.of_list variance
+    Some variance
   | NonCumulative((univ_lvlt,univdecl_extensible_instance),(univdecl_constraints,univdecl_extensible_constraints)) ->
     let univdecl_instance = univ_lvlt in
-    let variance = List.init (List.length univdecl_instance) (fun _ -> None) in
     state, true, false,
     mk_universe_decl univdecl_extensible_instance univdecl_extensible_constraints univdecl_constraints univdecl_instance,
-    Array.of_list variance
+    None
 
 [%%if coq = "9.0"]
 let comInductive_interp_mutual_inductive_constr ~cumulative ~poly ~template ~finite ~indnames =
@@ -3581,7 +3772,7 @@ let comInductive_interp_mutual_inductive_constr ~cumulative ~poly ~template ~fin
   let template_syntax = List.map (fun _ -> ComInductive.SyntaxAllowsTemplatePoly) indnames in
   let env_ar = Environ.pop_rel_context (List.length ctx_params) env_ar_params in
   ComInductive.interp_mutual_inductive_constr ~indnames ~arities_explicit ~template_syntax ~flags ~env_ar ~ctx_params
-[%%else]
+[%%elif coq = "9.2" || coq = "9.3"]
 let comInductive_interp_mutual_inductive_constr ~cumulative ~poly ~template ~finite ~ctx_params ~env_ar_params ~indnames =
   let flags = {
     ComInductive.poly = PolyFlags.make ~univ_poly:poly ~cumulative ~collapse_sort_variables:true;
@@ -3595,10 +3786,56 @@ let comInductive_interp_mutual_inductive_constr ~cumulative ~poly ~template ~fin
   let template_syntax = List.map (fun _ -> ComInductive.SyntaxAllowsTemplatePoly) indnames in
   let env_ar = Environ.pop_rel_context (List.length ctx_params) env_ar_params in
   ComInductive.interp_mutual_inductive_constr ~indnames ~arities_explicit ~template_syntax ~flags ~env_ar ~ctx_params
+[%%else]
+let comInductive_interp_mutual_inductive_constr ~sigma ~cumulative ~poly ~template ~finite ~udecl ~variances ~ctx_params ~env_ar_params ~indnames =
+  let poly = PolyFlags.make ~univ_poly:poly ~cumulative ~collapse_sort_variables:true in
+  let poly = PolyFlags.set_solve_term_variables poly in
+  let flags = {
+    ComInductive.poly = poly;
+    template = Some false;
+    finite;
+    mode = None;
+    schemes = Default;
+  }
+  in
+  let udecl = { udecl with UState.univdecl_variances = variances } in
+  let arities_explicit = List.map (fun _ -> true) indnames in
+  let template_syntax = List.map (fun _ -> ComInductive.SyntaxAllowsTemplatePoly) indnames in
+
+  ComInductive.interp_mutual_inductive_constr ~sigma ~indnames ~arities_explicit ~template_syntax ~flags ~udecl ~env_ar_params ~ctx_params
 [%%endif]
 
-
+[%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
+let restrict_inductive_universes state arity ktypes nuparams params =
+  let used =
+      List.fold_left (fun acc t ->
+          Univ.Level.Set.union acc
+            (universes_of_term state t))
+        (universes_of_term state arity) ktypes in
+  let used =
+    let open Context.Rel.Declaration in
+    List.fold_left (fun acc -> function
+      | (LocalDef(_,t,b)) ->
+        Univ.Level.Set.union acc
+          (Univ.Level.Set.union
+          (universes_of_term state t)
+          (universes_of_term state b))
+      | (LocalAssum(_,t)) ->
+        Univ.Level.Set.union acc
+          (universes_of_term state t))
+      used (nuparams @ params) in
+  restricted_sigma_of used state
+[%%else]
+(* In univ-alg, done in declare inductive *)
+let restrict_inductive_universes state arity ktypes nuparams params =
+  get_sigma state
+[%%endif]
 let comInductive_interp_mutual_inductive_constr_post x = x
+
+let fix_udecl_variables udecl sigma = 
+  let uinst = udecl.UState.univdecl_instance in
+  let lvars = List.fold_right Univ.Level.Set.add uinst Univ.Level.Set.empty in
+  Evd.fix_undefined_variables ~vars:lvars sigma
 
 let lp2inductive_entry ~depth coq_ctx constraints state t =
 
@@ -3646,7 +3883,9 @@ let lp2inductive_entry ~depth coq_ctx constraints state t =
                  str (pp2string P.(term depth) t)))
       (state,[]) ks in
     let knames, ktypes, kparams, kimpls = CList.split4 names_ktypes in
-
+            
+    let state, poly, cumulative, udecl, variances =
+      poly_cumul_udecl_variance_of_options state coq_ctx.options in
     let sigma = get_sigma state in
 
     (* Handling of non-uniform parameters *)
@@ -3677,50 +3916,29 @@ let lp2inductive_entry ~depth coq_ctx constraints state t =
 
     let state, (melims, mind, ubinders, uctx) =
       let private_ind = false in
-      let state, poly, cumulative, udecl, variances =
-        poly_cumul_udecl_variance_of_options state coq_ctx.options in
       let state, name = mk_coq_name state itname in
       let the_type =
         let open Context.Rel.Declaration in
         LocalAssum(name, EConstr.it_mkProd_or_LetIn arity (nuparams @ params)) in
       let env_ar_params = (Global.env ()) |> EC.push_rel the_type |> EC.push_rel_context (nuparams @ params) in
-
-    (* restruction to used universes *)
-    let state = minimize_universes state in
-    let used =
-      List.fold_left (fun acc t ->
-          Univ.Level.Set.union acc
-            (universes_of_term state t))
-        (universes_of_term state arity) ktypes in
-    let used =
-      let open Context.Rel.Declaration in
-      List.fold_left (fun acc -> function
-        | (LocalDef(_,t,b)) ->
-          Univ.Level.Set.union acc
-           (Univ.Level.Set.union
-            (universes_of_term state t)
-            (universes_of_term state b))
-        | (LocalAssum(_,t)) ->
-          Univ.Level.Set.union acc
-            (universes_of_term state t))
-        used (nuparams @ params) in
-      let sigma = restricted_sigma_of used state in
-
-      state, comInductive_interp_mutual_inductive_constr
-        ~sigma
-        ~template:(Some false)
-        ~udecl
-        ~variances
-        ~ctx_params:(nuparams @ params)
-        ~arities:[arity]
-        ~constructors:[knames, ktypes]
-        ~env_ar_params
-        ~cumulative
-        ~poly
-        ~private_ind
-        ~finite:finiteness
-        ~indnames:[itname] |> comInductive_interp_mutual_inductive_constr_post
-      in
+    (* restriction to used universes *)
+      let sigma = restrict_inductive_universes state arity ktypes nuparams params in
+      let sigma = fix_udecl_variables udecl sigma in
+       state, comInductive_interp_mutual_inductive_constr
+         ~sigma
+         ~template:(Some false)
+         ~poly
+         ~cumulative
+         ~udecl
+         ~variances
+         ~ctx_params:(nuparams @ params)
+         ~arities:[arity]
+         ~constructors:[knames, ktypes]
+         ~env_ar_params
+         ~private_ind
+         ~finite:finiteness
+         ~indnames:[itname] |> comInductive_interp_mutual_inductive_constr_post
+    in
     let mind = { mind with
       Entries.mind_entry_record =
         if finiteness = Declarations.BiFinite then
@@ -3728,7 +3946,6 @@ let lp2inductive_entry ~depth coq_ctx constraints state t =
           else Some None (* regular record *)
         else None } (* not a record *) in
     let i_impls = impls @ nuimpls in
-
     state, melims, mind, uctx, ubinders, i_impls, kimpls, List.(concat (rev gls_rev))
   in
 
@@ -3836,6 +4053,7 @@ let lp2inductive_entry ~depth coq_ctx constraints state t =
       let env_ar_params =
         let env_ar = List.fold_left (fun env ind_type -> EC.push_rel ind_type env) (Global.env ()) ind_types in
         EC.push_rel_context params env_ar in
+      (* No longer needed in rocq-univs
       let state = minimize_universes state in
       let used =
         List.fold_left (fun acc t ->
@@ -3852,8 +4070,8 @@ let lp2inductive_entry ~depth coq_ctx constraints state t =
               Univ.Level.Set.union acc
                 (Univ.Level.Set.union (universes_of_term state t) (universes_of_term state b))
           | LocalAssum(_,t) -> Univ.Level.Set.union acc (universes_of_term state t))
-          used params in
-      let sigma = restricted_sigma_of used state in
+          used params in *)
+      let sigma = get_sigma state in
       state, comInductive_interp_mutual_inductive_constr
         ~sigma
         ~template:(Some false)
@@ -4067,10 +4285,10 @@ let compute_with_uinstance ~depth options state f x inst_opt =
     match i with
     | None -> state, r, None, []
     | Some uinst ->
-      let v' = U.move ~from:v_depth ~to_:depth (E.mkUnifVar v_head ~args:v_args state) in
+      let uvar = (E.mkUnifVar v_head ~args:v_args state) in      
+      let v' = U.move ~from:v_depth ~to_:depth uvar in
       let state, lp_uinst, extra_goals = uinstance.API.Conversion.embed ~depth state uinst in
-      state, r, Some uinst, API.Conversion.Unify (v', lp_uinst) :: extra_goals
-    
+      state, r, Some uinst, API.Conversion.Unify (v', lp_uinst) :: extra_goals    
 
 let embed_arity ~depth coq_ctx state (relctx,ty) =
   let calldepth = depth in
@@ -4209,10 +4427,14 @@ let find_structure env ind = Structures.Structure.find env ind
 
 [%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
 let get_template_instance mind uinst = uinst
-[%%else]
+[%%elif coq = "9.3"]
 let get_template_instance mind uinst = match mind.Declarations.mind_template with
 | None -> uinst
 | Some templ -> templ.template_defaults
+[%%else]
+let get_template_instance mind uinst = match Declareops.inductive_template mind with
+| None -> uinst
+| Some templ -> UVars.Instance.of_level_instance templ.template_defaults
 [%%endif]
 
 let inductive_decl2lp ~depth coq_ctx constraints state (mutind,uinst,mind,(i_impls,k_impls)) =
@@ -4339,9 +4561,9 @@ let ucontext_of_mind_entry ubinders mie =
   match mie.mind_entry_universes with
   | Template_ind_entry _ -> nYI "template polymorphic inductives"
   | Monomorphic_ind_entry -> None
-  | Polymorphic_ind_entry _ ->
+  | Polymorphic_ind_entry (_, _) ->
     begin match fst ubinders with
-    | UState.Polymorphic_entry uc -> Some uc
+    | UState.Polymorphic_entry (uc, variances) -> Some (uc, variances)
     | UState.Monomorphic_entry _ ->
         CErrors.anomaly Pp.(str"universe polymorphic inductive entry with monomorphic universes")
     end
@@ -4360,7 +4582,7 @@ let unabstract_mind_entry ubinders mie =
       mind_entry_inds = List.map one_ind mie.mind_entry_inds }
 [%%endif]
 
-let upoly_decl_of ~depth state ~loose_udecl mie upoly =
+(*let upoly_decl_of ~depth state ~loose_udecl mie upoly =
   let open Entries in
   match upoly with
   | None -> state, (fun i -> E.mkApp ideclc i []), []
@@ -4379,7 +4601,36 @@ let upoly_decl_of ~depth state ~loose_udecl mie upoly =
           let uv = Array.map2 (fun x y -> (x,y)) vars variance |> Array.to_list in
           let state, up, gls = universe_decl.API.Conversion.embed ~depth state (Cumul((uv,loose_udecl),(csts,loose_udecl))) in
           state, (fun i -> E.mkApp uideclc i [up]), gls
-      end
+      end*)
+       
+let udecl_of_entry vars csts variances loose_udecl =
+  let open Entries in
+  let of_variances variances = 
+    match variances with
+    | Infer_variances -> 
+      Array.map (fun x -> x, None) vars |> Array.to_list
+    | Check_variances variances ->
+      let variances = UVars.Variances.repr variances in
+      let variances = Array.map2 (fun x v -> x, Some (UVars.VarianceOccurrence.typing_variances v)) vars variances in
+      Array.to_list variances
+  in
+  match variances with
+  | None -> NonCumul ((Array.to_list vars,loose_udecl),(csts, loose_udecl))
+  | Some v -> Cumul ((of_variances v, loose_udecl), (csts, loose_udecl))
+
+let upoly_decl_of ~depth state ~loose_udecl mie upoly =
+  let open Entries in
+  match upoly with
+  | None -> state, (fun i -> E.mkApp ideclc i []), []
+  | Some (uc, variances) ->
+    let qvars, vars = UVars.LevelInstance.to_array @@ UVars.UContext.instance uc in
+    if not (CArray.is_empty qvars) then nYI "sort poly inductives"
+    else
+      let state, vars = CArray.fold_left_map (fun s l -> fst (name_universe_level s l), l) state vars in
+      let csts = univs_of_csts uc in   
+      let udecl = udecl_of_entry vars csts variances loose_udecl in
+      let state, up, gls = universe_decl.API.Conversion.embed ~depth state udecl in
+      state, (fun i -> E.mkApp uideclc i [up]), gls      
 
 [%%if coq = "9.0" || coq = "9.1"]
 let merge_ucontext sigma cs =
@@ -4405,6 +4656,7 @@ let inductive_entry2lp ~depth coq_ctx constraints state ~loose_udecl e =
       { e with sigma = merge_universe_context_set UState.univ_flexible e.sigma uctx}) in
   let upoly = ucontext_of_mind_entry univ_binders mie in
   let mie = unabstract_mind_entry univ_binders mie in
+
   let state = match upoly with
     | None -> state
     | Some cs -> S.update engine state (fun e ->
@@ -4600,7 +4852,7 @@ let lp2record_field_spec { name; is_coercion; is_canonical } =
 [%%endif]
 
 let merge_universe_context state uctx =
-  S.update engine state (fun e -> { e with sigma = Evd.merge_universe_context e.sigma uctx })
+  S.update engine state (fun e -> { e with sigma = merge_ustate e.sigma uctx })
 
 (* ********************************* }}} ********************************** *)
 (* ****************************** API ********************************** *)

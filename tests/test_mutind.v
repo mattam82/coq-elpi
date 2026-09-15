@@ -1,5 +1,6 @@
 From elpi Require Import elpi.
 
+Unset Universe Polymorphism.
 Inductive tree : Type :=
 | node (f : forest)
 with forest : Type :=
