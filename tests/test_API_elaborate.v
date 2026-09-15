@@ -53,6 +53,7 @@ Elpi Query lp:{{
 Elpi Command test.API2.
 
 Elpi Accumulate lp:{{
+  main [upoly-indt-decl D _Udecl] :- coq.say "raw upoly:" D.
   main [indt-decl D] :- coq.say "raw:" D,
     std.assert-ok! (coq.elaborate-indt-decl-skeleton D D1) "illtyped",
     coq.say "elab1:" D1,
@@ -67,9 +68,10 @@ Elpi Accumulate lp:{{
   ].
 }}.
 
+Set Universe Polymorphism.
 
 Elpi test.API2 Inductive ind1 (A : T1) | (B : Type) :=
-  K1 : ind1 B -> ind1 B | K2 : A -> ind1 B | K3 (a : A) : ind1 B.
+  K1 : ind1 B -> ind1 B | K2 : A -> ind1 B | K3 (a : A) (a : A): ind1 B.
 
 (*
 
@@ -131,8 +133,10 @@ wrong constant:,
 
 *)
 
-Elpi test.API2 Record ind2 (A : T1) := {
-   fld1 : A;
+Unset Universe Polymorphism.
+
+Elpi test.API2 Record ind2 (B : T1) := {
+   fld1 : B;
    fld2 : fld1 = fld1;
 }.
 
@@ -175,13 +179,12 @@ Abort.
 
 #[arguments(raw)] Elpi Command detype.
 Elpi Accumulate lp:{{
-  main [upoly-const-decl _ _ (parameter _ _ (sort (typ U)) _ as A) (upoly-decl [UL] _ _ _)] :-
+  main [upoly-const-decl _ _ (parameter _ _ (sort (typ U)) _ as A) (upoly-decl-cumul [auto UL] _ _ _)] :-
     std.assert! (coq.univ.variable U UL) "wtf",
     (@keepunivs! => std.assert-ok! (coq.elaborate-arity-skeleton A _ (parameter _ _ (sort (typ V)) _)) "wtf"),
     std.assert! (U = V) "elaboration refreshes",
     coq.say U V.
 }}.
-
 
 Elpi detype #[universes(polymorphic)] Definition f@{u|Set < u} (x : Type@{u}) := x.
 
