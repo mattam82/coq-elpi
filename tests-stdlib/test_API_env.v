@@ -121,6 +121,7 @@ Elpi Query lp:{{
 Elpi Command primp.
 Elpi Accumulate lp:{{
   main [const-decl _ (some (fun _ _ r\ app[primitive _, r])) _].
+  main [upoly-const-decl _ (some (fun _ _ r\ app[primitive _, r])) _ _].
 }}.
 Elpi primp Definition pc (r : prim_eq_class nat) := r.(prim_eq_f).
 
@@ -148,6 +149,7 @@ main _ :-
 pred rename i:id, o:id.
 rename K S :- S is K ^ "1".
 }}.
+
 Elpi Query indtest lp:{{ main _ }}.
 
 Check myind true false : Prop.

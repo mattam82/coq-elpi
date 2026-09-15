@@ -34,7 +34,6 @@ type univ_csts = Univ.UnivConstraints.t
 
 type universe_decl = (Univ.Level.t list * bool) * (univ_csts * bool)
 type universe_decl_cumul = ((Univ.Level.t * UVars.Variance.t option) list  * bool) * (univ_csts * bool)
-
 type universe_decl_option =
   | NotUniversePolymorphic
   | Cumulative of universe_decl_cumul
@@ -280,6 +279,10 @@ val compute_with_uinstance :
     state * 'c * UVars.Instance.t option * Conversion.extra_goals
 
 (* CData relevant for other modules, e.g the one exposing Coq's API *)
+val quality : Sorts.Quality.t Conversion.t
+val isquality : RawOpaqueData.t -> bool
+val qualityout : RawOpaqueData.t -> Sorts.Quality.t
+
 val universe_level_variable : Univ.Level.t Conversion.t
 val univ : Univ.Universe.t Conversion.t
 val isuniv : RawOpaqueData.t -> bool
@@ -342,7 +345,7 @@ val body_of_constant :
   State.t -> Names.Constant.t -> UVars.Instance.t option ->
   State.t * EConstr.t option * UVars.Instance.t option
 
-val grab_global_env_drop_univs_and_sigma : State.t -> State.t
+val grab_global_env_drop_univs_and_sigma : ?force:bool -> State.t -> State.t
 val grab_global_env_drop_sigma : State.t -> State.t
 
 val grab_global_env : uctx:Univ.ContextSet.t -> State.t -> State.t
@@ -356,6 +359,7 @@ val mk_def :
 val get_global_env : State.t -> Environ.env
 val get_sigma : State.t -> Evd.evar_map
 val update_sigma : State.t -> (Evd.evar_map -> Evd.evar_map) -> State.t
+val update_return_sigma : State.t -> (Evd.evar_map -> Evd.evar_map * 'a) -> State.t * 'a
 
 val solvegoals2query :
   Evd.evar_map -> Evar.t list -> Elpi.API.Ast.Loc.t -> main:'a list ->
@@ -375,6 +379,8 @@ val show_coq_elpi_engine_mapping : State.t -> string
 val type_of_global : state -> GlobRef.t -> UVars.Instance.t option -> state * (EConstr.t * UVars.Instance.t)
 val minimize_universes : state -> state
 val new_univ_level_variable : ?flexible:bool -> state -> state * (Univ.Level.t * Univ.Universe.t)
+val fresh_instance : ?flexible:bool -> state -> GlobRef.t -> state * UVars.Instance.t
+
 val constraint_eq : Sorts.t -> Sorts.t -> UnivProblem.t
 val constraint_leq : Sorts.t -> Sorts.t -> UnivProblem.t
 val add_universe_constraint : state -> UnivProblem.t -> state
@@ -382,13 +388,17 @@ val force_level_of_universe : state -> Univ.Universe.t -> state * Univ.Level.t *
 val purge_algebraic_univs_sort : state -> EConstr.ESorts.t -> state * Sorts.t
 val ideclc : constant
 val uideclc : constant
+val poly_cumul_udecl_variance_of_options : state -> options -> state * bool * bool * UState.universe_decl * UVars.Variance.t option list option
 val merge_universe_context : state -> UState.t -> state
 val restricted_sigma_of : Univ.Level.Set.t -> state -> Evd.evar_map
 val universes_of_term : state -> EConstr.t -> Univ.Level.Set.t
 
-val poly_cumul_udecl_variance_of_options : state -> options -> state * bool * bool * UState.universe_decl * Entries.variance_entry
 val universes_of_udecl : state -> UState.universe_decl -> Univ.Level.Set.t
-
+val nf_evar : state -> EConstr.t -> EConstr.t
 val mind_record : Declarations.mind_specif -> Declarations.record_info
 
 val univ_of_sort : Sorts.t -> Univ.Universe.t
+
+val merge_ustate : Evd.evar_map -> UState.t -> Evd.evar_map
+val from_ustate : UState.t -> Evd.evar_map
+val set_ustate : Evd.evar_map -> UState.t -> Evd.evar_map
