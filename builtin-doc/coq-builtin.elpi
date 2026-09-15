@@ -515,6 +515,7 @@ macro @uinstance! I :- get-option "coq:uinstance" I. % universe instance
 % The second boolean is tt if this list can be extended by Coq or it has to
 % mention all universe constraints actually required to type check the
 % declaration)
+macro @mdecl!                   :- get-option "coq:mdecl" tt.
 macro @udecl! Vs LV Cs LC       :- get-option "coq:udecl" (upoly-decl Vs LV Cs LC).
 macro @udecl-cumul! Vs LV Cs LC :- get-option "coq:udecl-cumul" (upoly-decl-cumul Vs LV Cs LC).
 macro @univpoly!       :- @udecl! [] tt [] tt.
@@ -673,7 +674,7 @@ builtin func coq.env.typeof gref -> term.
 % [coq.env.global GR T] turns a global reference GR into a term, or
 % viceversa.
 % T = (global GR) or, if GR points to a universe polymorphic term,
-% T = (pglobal GR I).
+% T = (global GR I).
 % Supported attributes:
 % - @uinstance! I (default: fresh instance I)
 builtin func coq.env.global -> gref, term.
@@ -740,6 +741,9 @@ builtin func coq.env.opaque? constant.
 % [coq.env.univpoly? GR PolyArity] checks if GR is universe polymorphic and
 % if so returns the number of universe variables
 builtin func coq.env.univpoly? gref -> int.
+
+% [coq.env.ustate] print current ustate information
+external func coq.env.ustate.
 
 % [coq.env.const GR Bo Ty] reads the type Ty and the body Bo of constant
 % GR.
@@ -844,8 +848,21 @@ builtin func coq.env.current-section-path -> list string.
 % such as @univpoly!, @univpoly-cumul!, @udecl! or @udecl-cumul! in order to
 % declare universe polymorphic constants or inductives.
 
-% [coq.env.add-const Name Bo Ty Opaque C] Declare a new constant: C gets a
-% constant derived from Name
+% [coq.env.compute-const-udecl Bo Ty UDecl] Compute the polymorphic universe
+% decl for a constant declaration.
+% Supported attributes:
+% - @local! (default: false)
+% - @using! (default: section variables actually used)
+% - @univpoly! (default unset)
+% - @udecl! (default unset)
+% - @udecl-cumul! (default unset)
+% - @dropunivs! (default: false, drops all universe constraints from the
+% store after the definition)
+% 
+external func coq.env.compute-const-udecl term, term -> option upoly-decl.
+
+% [coq.env.add-const-uinst Name Bo Ty Opaque C UInst] Declare a new
+% constant: C gets a constant derived from Name
 % and the current module; Ty can be left unspecified and in that case
 % the
 % inferred one is taken (as in writing Definition x := t); Bo can be
@@ -853,8 +870,12 @@ builtin func coq.env.current-section-path -> list string.
 % unspecified and in that case an axiom is added (or a section variable,
 % if a section is open and @local! is used). Omitting the body and the type
 % is
-% an error. Note: using this API for declaring an axiom or a section
-% variable is
+% an error. The UInst is a well-typed universe instance for C in the current
+% universe state.
+% Variables in UInst are rigid, so they cannot be subject to minimization.
+% 
+% Note: using this API for declaring an axiom or a section variable
+% is
 % deprecated, use coq.env.add-axiom or coq.env.add-section-variable
 % instead.
 % Supported attributes:
@@ -862,21 +883,36 @@ builtin func coq.env.current-section-path -> list string.
 % - @using! (default: section variables actually used)
 % - @univpoly! (default unset)
 % - @udecl! (default unset)
+% - @udecl-cumul! (default unset)
 % - @dropunivs! (default: false, drops all universe constraints from the
 % store after the definition)
 % 
-builtin func coq.env.add-const id, term, term, opaque? -> constant.
+builtin func coq.env.add-const-uinst id, term, term, 
+                                     opaque? -> constant, univ-instance.
 
-% [coq.env.add-axiom Name Ty C] Declare a new axiom: C gets a constant
-% derived from Name
-% and the current module.
+
+func coq.env.add-const id, term, term, opaque? -> constant.
+coq.env.add-const ID Bo Ty Opaque C :- coq.env.add-const-uinst ID Bo Ty Opaque C _.
+  
+
+% [coq.env.add-axiom-uinst Name Ty C UInst] Declare a new axiom: C gets a
+% constant derived from Name
+% and the current module. The UInst is a well-typed universe instance for C
+% in the current universe state.
+% Variables in UInst are rigid, so they cannot be subject to minimization.
+% 
 % Supported attributes:
 % - @local! (default: false)
 % - @univpoly! (default unset)
 % - @using! (default: section variables actually used)
 % - @inline! (default: no inlining)
 % - @inline-at! N (default: no inlining)
-builtin func coq.env.add-axiom id, term -> constant.
+builtin func coq.env.add-axiom-uinst id, term -> constant, univ-instance.
+
+
+func coq.env.add-axiom id, term -> constant.
+coq.env.add-axiom ID T C :- coq.env.add-axiom-uinst ID T C _.
+  
 
 % [coq.env.add-section-variable Name I Ty C] Declare a new section variable:
 % C gets a constant derived from Name
@@ -896,12 +932,18 @@ coq.env.add-context (context-item Name _I Ty (some Bo) Rest) :-
   coq.env.add-context (Rest {coq.env.global (const C)}).
 
 
-% [coq.env.add-indt Decl I] Declares an inductive type.
+% [coq.env.add-indt-uinst Decl I UInst] Declares an inductive type.
 % Supported attributes:
 % - @dropunivs! (default: false, drops all universe constraints from the
 % store after the definition)
 % - @primitive! (default: false, makes records primitive)
-builtin func coq.env.add-indt indt-decl -> inductive.
+builtin func coq.env.add-indt-uinst indt-decl -> inductive, 
+                                    univ-instance.
+
+
+func coq.env.add-indt indt-decl -> inductive.
+coq.env.add-indt Decl I :- coq.env.add-indt-uinst Decl I _.
+  
 
 % Interactive module construction
 
@@ -1044,6 +1086,10 @@ builtin func coq.env.primitive-projection? -> projection, constant, int.
 % able to handle algebraic universes consistently, making this purging
 % phase unnecessary.
 
+% sort quality
+kind quality type.
+
+
 % universe level (algebraic: max, +1, univ.variable)
 data univ.
 
@@ -1109,11 +1155,10 @@ builtin func coq.univ.variable.of-term term -> coq.univ.variable.set.
 
 % -- Universe instance (for universe polymorphic global terms) ------
 
-% As of today a universe polymorphic constant can only be instantiated
-% with universe level variables. That is f@{Prop} is not valid, nor
-% is f@{u+1}. One can only write f@{u} for any u.
+% A universe polymorphic constant can be instantiated with sorts and
+% universes.
 % 
-% A univ-instance is morally a list of universe level variables,
+% A univ-instance is morally a list of sorts and universes,
 % but its list syntax is hidden in the terms. If you really need to
 % craft or inspect one of these, the following APIs can help you.
 % 
@@ -1129,20 +1174,20 @@ data univ-instance.
 external func coq.empty-univ-instance? univ-instance.
 
 % [coq.univ-instance UI UL] relates a univ-instance UI and a list of
-% universe level variables UL
-builtin func coq.univ-instance -> univ-instance, list univ.variable.
+% universes UL
+builtin func coq.univ-instance -> univ-instance, list univ.
 
 % [coq.univ-instance.unify-eq GR UI1 UI2 Diagnostic] unifies the two
 % universe instances for the same gref
-builtin func coq.univ-instance.unify-eq gref, univ-instance, 
-                                       univ-instance -> diagnostic.
+builtin func coq.univ-instance.unify-eq gref -> univ-instance, 
+                                        univ-instance, diagnostic.
 
 % [coq.univ-instance.unify-leq GR UI1 UI2 Diagnostic] unifies the two
 % universe instances for the same gref. Note: if the GR is not *cumulative*
 % (see Cumulative or #[universes(cumulative)]) then this API imposes an
 % equality constraint.
-builtin func coq.univ-instance.unify-leq gref, univ-instance, 
-                                        univ-instance -> diagnostic.
+builtin func coq.univ-instance.unify-leq gref -> univ-instance, 
+                                         univ-instance, diagnostic.
 
 % -- Declaration of universe polymorphic global terms -----------
 
@@ -1152,11 +1197,10 @@ builtin func coq.univ-instance.unify-leq gref, univ-instance,
 % @udecl-cumul! macros). Note that only inductive types can be
 % declared as cumulative.
 
-% Constraint between two universes level variables
-builtin data univ-constraint.
-builtin symb lt : univ.variable -> univ.variable -> univ-constraint = "2". 
-builtin symb le : univ.variable -> univ.variable -> univ-constraint = "1". 
-builtin symb eq : univ.variable -> univ.variable -> univ-constraint = "2". 
+% Constraint between two universes
+kind univ-constraint type.
+builtin symbol le : univ -> univ -> univ-constraint = "1". 
+builtin symbol eq : univ -> univ -> univ-constraint = "2". 
 
 % Variance of a universe level variable
 builtin data univ-variance.
@@ -1165,13 +1209,14 @@ builtin symb covariant  : univ.variable -> univ-variance = "1".
 builtin symb invariant  : univ.variable -> univ-variance = "1". 
 builtin symb irrelevant : univ.variable -> univ-variance = "1". 
 
-% Constraints for a non-cumulative declaration. Boolean tt means loose
-% (e.g. the '+' in f@{u v + | u < v +})
-builtin data upoly-decl.
-builtin symb upoly-decl       : list univ.variable -> bool ->
-                                list univ-constraint -> bool -> upoly-decl = "1". 
-builtin symb upoly-decl-cumul : list univ-variance -> bool ->
-                                list univ-constraint -> bool -> upoly-decl = "1". 
+% Constraints for a polymorphic declaration. Boolean tt means loose (e.g.
+% the '+' in f@{u v + | u < v +})
+kind upoly-decl type.
+builtin symbol upoly-decl : list univ.variable -> bool ->
+                             list univ-constraint -> bool -> upoly-decl = "1". 
+builtin symbol upoly-decl-cumul : list univ-variance -> bool ->
+                                   list univ-constraint -> bool ->
+                                   upoly-decl = "1". 
 
 % -- Primitive --------------------------------------------------------
 
@@ -2062,6 +2107,10 @@ coq.elpi.accumulate S N C :- coq.elpi.accumulate-clauses S N [C].
 % - @global! (default: false, always active, only if Scope is
 % execution-site, discouraged)
 builtin func coq.elpi.accumulate-clauses scope, id, list clause.
+
+% [coq.elpi.abstract-clause-univs Clause AClause] 
+% Abstract universes of the clause as pi quantifications
+external func coq.elpi.abstract-clause-univs prop -> prop.
 
 % Specify if a predicate argument is in input or output mode
 builtin data argument_mode.
