@@ -1,5 +1,3 @@
-
-
 From elpi Require Import elpi.
 
 Elpi Command declarations.
@@ -16,8 +14,10 @@ main [upoly-indt-decl A UD] :- !, std.spy-do! [
   coq.univ.print,
   std.assert-ok! (coq.typecheck-indt-decl A) "Illtyped inductive declaration",
   coq.say "typed:" A,
-  coq.upoly-decl->attribute UD CL,
-  CL => coq.env.add-indt A _,
+  if (get-option "coq:univ-poly" UP) true (UP is "undefined"),
+  coq.say "univ-poly flag: " UP,
+  coq.upoly-decl->attribute (some UD) CL,
+  CL => coq.env.add-indt A _
 ].
 main [const-decl N (some BO) A] :- !, std.spy-do! [
   coq.arity->term A TY,
@@ -27,7 +27,7 @@ main [const-decl N (some BO) A] :- !, std.spy-do! [
  main [upoly-const-decl N (some BO) A UD] :- !, std.spy-do! [
   coq.arity->term A TY,
   std.assert-ok! (coq.typecheck BO TY) "illtyped definition",
-  coq.upoly-decl->attribute UD CL,
+  coq.upoly-decl->attribute (some UD) CL,
   CL => coq.env.add-const N BO TY _ _,
 ].
 main [const-decl N none A] :- !, std.spy-do! [
@@ -38,7 +38,7 @@ main [const-decl N none A] :- !, std.spy-do! [
 main [upoly-const-decl N none A UD] :- !, std.spy-do! [
   coq.arity->term A TY,
   std.assert-ok! (coq.typecheck-ty TY _) "illtyped axiom",
-  coq.upoly-decl->attribute UD CL,
+  coq.upoly-decl->attribute (some UD) CL,
   CL => coq.env.add-axiom N TY _,
 ].
 
@@ -66,7 +66,7 @@ main [upoly-indt-decl RA UD] :- !, std.spy-do! [
   coq.univ.print,
   @keepunivs! => std.assert-ok! (coq.elaborate-indt-decl-skeleton RA A) "Illtyped inductive declaration",
   coq.say "typed:" A,
-  coq.upoly-decl->attribute UD CL,
+  coq.upoly-decl->attribute (some UD) CL,
   CL => coq.env.add-indt A _,
 ].
 main [const-decl N (some RBO) RA] :- !, std.spy-do! [
@@ -79,7 +79,7 @@ main [upoly-const-decl N (some RBO) RA UD] :- !, std.spy-do! [
   coq.arity->term RA RTY,
   @keepunivs! => std.assert-ok! (coq.elaborate-ty-skeleton RTY _ TY) "illtyped arity", 
   @keepunivs! => std.assert-ok! (coq.elaborate-skeleton RBO TY BO) "illtyped definition",
-  coq.upoly-decl->attribute UD CL,
+  coq.upoly-decl->attribute (some UD) CL,
   CL => coq.env.add-const N BO TY _ _,
 ].
 main [const-decl N none RA] :- !, std.spy-do! [
@@ -90,7 +90,7 @@ main [const-decl N none RA] :- !, std.spy-do! [
 main [upoly-const-decl N none RA UD] :- !, std.spy-do! [
   coq.arity->term RA RTY,
   @keepunivs! => std.assert-ok! (coq.elaborate-ty-skeleton RTY _ TY) "illtyped axiom",
-  coq.upoly-decl->attribute UD CL,
+  coq.upoly-decl->attribute (some UD) CL,
   CL => coq.env.add-axiom N TY _,
 ].
 
@@ -319,7 +319,7 @@ Elpi Query lp:{{ coq.locate "X4" GR, coq.env.global GR (global GR _) }}.
 Elpi declarations #[universes(polymorphic)] Inductive X5@{u} : Type@{u} := .
 About X5.
 
-Elpi declarations #[universes(polymorphic)] Inductive X6@{u v|u<v} : Type@{v} := K (u : Type@{u}).
+Elpi declarations #[universes(polymorphic)] Inductive X6@{u v|u<v} : Type@{v} := K (u : Type@{u}). 
 About X6.
 
 Fail Elpi raw_declarations #[universes(polymorphic)] Inductive X7@{u v|u<v} : Type@{v} := K (u : Type@{u}).
@@ -340,6 +340,7 @@ About f3.
 Elpi raw_declarations #[universes(polymorphic)] Definition f4@{u} (T:Type@{u}) (T1:Type@{u}) (x:T) := x.
 About f4.
 
+Unset Universe Polymorphism.
 Universe uuu.
 
 Elpi raw_declarations Definition f5 (T:Type@{uuu}) (T1:Type@{uuu}) (x:T) := x.
