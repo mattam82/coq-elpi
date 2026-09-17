@@ -173,7 +173,7 @@ main GR Name [Clause1, Clause2] :- do! [
   % we build the comparison function
   bo-param Lno (global (indt GR) GRI) Arity RSkel,
   std.assert-ok! (coq.elaborate-skeleton RSkel RT R) "derive.eq generates illtyped term",
-  coq.env.add-const-uinst Name R RT _ Cmp CmpI,
+  coq.env.add-const Name R RT _ Cmp,
 
   % we register it as a clause
   mk-clause Lno Arity (pi gri cmpi\ eq-db (global (indt GR) gri) (global (indt GR) gri) (global (const Cmp) cmpi) :- [!]) Clause1,
