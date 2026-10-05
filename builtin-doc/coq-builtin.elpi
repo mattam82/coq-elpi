@@ -673,7 +673,6 @@ builtin func coq.env.typeof gref -> term.
 
 % [coq.env.global GR T] turns a global reference GR into a term, or
 % viceversa.
-% T = (global GR) or, if GR points to a universe polymorphic term,
 % T = (global GR I).
 % Supported attributes:
 % - @uinstance! I (default: fresh instance I)
