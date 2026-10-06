@@ -2107,6 +2107,10 @@ coq.elpi.accumulate S N C :- coq.elpi.accumulate-clauses S N [C].
 % execution-site, discouraged)
 builtin func coq.elpi.accumulate-clauses scope, id, list clause.
 
+% [coq.elpi.clear-univs Diagnostic]  
+%     Clears the existential variables and universes from the state 
+external func coq.elpi.clear-univs -> diagnostic.
+
 % [coq.elpi.abstract-clause-univs Clause AClause] 
 % Abstract universes of the clause as pi quantifications
 external func coq.elpi.abstract-clause-univs prop -> prop.

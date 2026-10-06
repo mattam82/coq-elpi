@@ -5204,6 +5204,14 @@ Supported attributes:
         ~scope ~dbname clauses ~depth ~options state)),
   DocAbove);
 
+  MLCode(Pred("coq.elpi.clear-univs",
+  InOut(B.ioarg B.diagnostic, "Diagnostic",
+    Full (global, {| 
+    Clears the existential variables and universes from the state |})),
+    (fun diag ~depth {options} _ state ->
+      let state = Rocq_elpi_HOAS.grab_global_env_drop_univs_and_sigma ~force:true state in
+      state, !: B.mkOK, [])),
+  DocAbove);
 
   MLCode(Pred("coq.elpi.abstract-clause-univs",    
     In(B.poly "prop", "Clause",
