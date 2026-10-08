@@ -2068,7 +2068,7 @@ let univ_binder_compat_820 a b = b
 [%%if coq = "9.0" || coq = "9.1" || coq = "9.2" || coq = "9.3"]
 let ustate_univs_of_ind_entry uctx = UState.Polymorphic_entry uctx
 [%%else]
-let ustate_univs_of_ind_entry uctx = UState.Polymorphic_entry (UVars.AbstractContext.repr uctx)
+let ustate_univs_of_ind_entry uctx = UState.Polymorphic_entry (UVars.AbstractContext.repr uctx, None)
 [%%endif]
 
 [%%if coq = "9.0" || coq = "9.1"]
@@ -2893,7 +2893,7 @@ Supported attributes:
        | Monomorphic_ind_entry -> (UVars.Instance.empty, Monomorphic_entry, UState.Monomorphic_entry uctx, univ_binders)
        | Template_ind_entry _ -> nYI "template polymorphic inductives"
        | Polymorphic_ind_entry (uctx, variances) ->
-          let uinst = UVars.UContext.instance uctx in
+          let uinst = UVars.UContext.instance (UVars.AbstractContext.repr uctx) in
           let uinst = UVars.Instance.of_level_instance uinst in
           (uinst, Polymorphic_entry (uctx, variances), 
           UState.Polymorphic_entry (UVars.AbstractContext.repr uctx, variances), univ_binders)

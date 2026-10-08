@@ -1498,7 +1498,7 @@ let in_elpiast_primitive ~loc = function
   | Projection p -> projectionina ~loc p
   | Parray p -> parrayna ~loc p
 
-let canonical_array_instance = UVars.Instance.of_array ([||], [|Univ.Level.set|])
+let canonical_array_instance = UVars.Instance.of_array ([||], [|Univ.Universe.type0|])
 let canonical_array_einstance = EC.EInstance.make canonical_array_instance
 
 let rec is_primitive_shaped sigma t = match EC.kind sigma t with
@@ -4562,7 +4562,7 @@ let ucontext_of_mind_entry ubinders mie =
   | Template_ind_entry _ -> nYI "template polymorphic inductives"
   | Monomorphic_ind_entry -> None
   | Polymorphic_ind_entry (_, _) ->
-    begin match fst ubinders with
+    begin match ubinders.UState.universes_entry_universes with
     | UState.Polymorphic_entry (uc, variances) -> Some (uc, variances)
     | UState.Monomorphic_entry _ ->
         CErrors.anomaly Pp.(str"universe polymorphic inductive entry with monomorphic universes")
@@ -4572,8 +4572,8 @@ let unabstract_mind_entry ubinders mie =
   let open Entries in
   match ucontext_of_mind_entry ubinders mie with
   | None -> mie
-  | Some uc ->
-    let inst = UVars.UContext.instance uc in
+  | Some (uc, variances) ->
+    let inst = UVars.Instance.of_level_instance (UVars.UContext.instance uc) in
     let one_ind ind = { ind with
       mind_entry_arity = Vars.subst_instance_constr inst ind.mind_entry_arity;
       mind_entry_lc = List.map (Vars.subst_instance_constr inst) ind.mind_entry_lc } in
@@ -4636,7 +4636,7 @@ let upoly_decl_of ~depth state ~loose_udecl mie upoly =
 let merge_ucontext sigma cs =
   Evd.merge_context_set UState.univ_flexible sigma (snd (UVars.UContext.to_context_set cs))
 [%%else]
-let merge_ucontext sigma cs =
+let merge_ucontext sigma (cs, _) =
   let (qs, us), (qcst, ucst) = UVars.UContext.to_context_set cs in
   Evd.merge_sort_context_set UState.univ_flexible sigma ((qs, qcst), (us, ucst))
 [%%endif]

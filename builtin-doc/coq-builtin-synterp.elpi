@@ -231,11 +231,11 @@ typeabbrev id string.
 
 
 % Name of a module /*E*/
-data modpath.
+kind modpath type.
 
 
 % Name of a module type /*E*/
-data modtypath.
+kind modtypath type.
 
 
 % [coq.locate-module ModName ModPath] locates a module.  It's a fatal error
@@ -416,7 +416,7 @@ builtin symb import-module             : modpath -> synterp-action = "1".
 builtin symb export-module             : modpath -> synterp-action = "1". 
 
 % Synterp action group
-data group.
+kind group type.
 
 
 % [coq.synterp-actions A] Get the list of actions performed during the

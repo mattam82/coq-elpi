@@ -612,15 +612,15 @@ builtin func coq.version -> string, int, int, int.
 % [@bla].
 
 % Global constant name
-data constant.
+kind constant type.
 
 
 % Inductive type name
-data inductive.
+kind inductive type.
 
 
 % Inductive constructor name
-data constructor.
+kind constructor type.
 
 
 % Global objects: inductive types, inductive constructors, definitions
@@ -635,11 +635,11 @@ typeabbrev id string.
 
 
 % Name of a module /*E*/
-data modpath.
+kind modpath type.
 
 
 % Name of a module type /*E*/
-data modtypath.
+kind modtypath type.
 
 
 % Result of coq.locate-all
@@ -742,7 +742,7 @@ builtin func coq.env.opaque? constant.
 builtin func coq.env.univpoly? gref -> int.
 
 % [coq.env.ustate] print current ustate information
-external func coq.env.ustate.
+builtin func coq.env.ustate.
 
 % [coq.env.const GR Bo Ty] reads the type Ty and the body Bo of constant
 % GR.
@@ -858,7 +858,7 @@ builtin func coq.env.current-section-path -> list string.
 % - @dropunivs! (default: false, drops all universe constraints from the
 % store after the definition)
 % 
-external func coq.env.compute-const-udecl term, term -> option upoly-decl.
+builtin func coq.env.compute-const-udecl term, term -> option upoly-decl.
 
 % [coq.env.add-const-uinst Name Bo Ty Opaque C UInst] Declare a new
 % constant: C gets a constant derived from Name
@@ -886,8 +886,8 @@ external func coq.env.compute-const-udecl term, term -> option upoly-decl.
 % - @dropunivs! (default: false, drops all universe constraints from the
 % store after the definition)
 % 
-builtin func coq.env.add-const-uinst id, term, term, 
-                                     opaque? -> constant, univ-instance.
+builtin func coq.env.add-const-uinst id, term, term, opaque? -> constant, 
+                                    univ-instance.
 
 
 func coq.env.add-const id, term, term, opaque? -> constant.
@@ -936,8 +936,7 @@ coq.env.add-context (context-item Name _I Ty (some Bo) Rest) :-
 % - @dropunivs! (default: false, drops all universe constraints from the
 % store after the definition)
 % - @primitive! (default: false, makes records primitive)
-builtin func coq.env.add-indt-uinst indt-decl -> inductive, 
-                                    univ-instance.
+builtin func coq.env.add-indt-uinst indt-decl -> inductive, univ-instance.
 
 
 func coq.env.add-indt indt-decl -> inductive.
@@ -1090,7 +1089,7 @@ kind quality type.
 
 
 % universe level (algebraic: max, +1, univ.variable)
-data univ.
+kind univ type.
 
 
 % Sorts (kinds of types)
@@ -1139,7 +1138,7 @@ builtin func coq.univ.constraints -> list univ-constraint.
 % -- Universe variables ------
 
 % universe level variable
-data univ.variable.
+kind univ.variable type.
 
 
 % [coq.univ.variable U L] relates a univ.variable L to a univ U
@@ -1166,11 +1165,11 @@ builtin func coq.univ.variable.of-term term -> coq.univ.variable.set.
 % term (of the instance it contains) with another one.
 
 % Universes level instance for a universe-polymorphic constant
-data univ-instance.
+kind univ-instance type.
 
 
 % [coq.empty-univ-instance? UI] is the univ instance empty
-external func coq.empty-univ-instance? univ-instance.
+builtin func coq.empty-univ-instance? univ-instance.
 
 % [coq.univ-instance UI UL] relates a univ-instance UI and a list of
 % universes UL
@@ -1179,14 +1178,14 @@ builtin func coq.univ-instance -> univ-instance, list univ.
 % [coq.univ-instance.unify-eq GR UI1 UI2 Diagnostic] unifies the two
 % universe instances for the same gref
 builtin func coq.univ-instance.unify-eq gref -> univ-instance, 
-                                        univ-instance, diagnostic.
+                                       univ-instance, diagnostic.
 
 % [coq.univ-instance.unify-leq GR UI1 UI2 Diagnostic] unifies the two
 % universe instances for the same gref. Note: if the GR is not *cumulative*
 % (see Cumulative or #[universes(cumulative)]) then this API imposes an
 % equality constraint.
 builtin func coq.univ-instance.unify-leq gref -> univ-instance, 
-                                         univ-instance, diagnostic.
+                                        univ-instance, diagnostic.
 
 % -- Declaration of universe polymorphic global terms -----------
 
@@ -1197,9 +1196,9 @@ builtin func coq.univ-instance.unify-leq gref -> univ-instance,
 % declared as cumulative.
 
 % Constraint between two universes
-kind univ-constraint type.
-builtin symbol le : univ -> univ -> univ-constraint = "1". 
-builtin symbol eq : univ -> univ -> univ-constraint = "2". 
+builtin data univ-constraint.
+builtin symb le : univ -> univ -> univ-constraint = "1". 
+builtin symb eq : univ -> univ -> univ-constraint = "2". 
 
 % Variance of a universe level variable
 builtin data univ-variance.
@@ -1210,28 +1209,27 @@ builtin symb irrelevant : univ.variable -> univ-variance = "1".
 
 % Constraints for a polymorphic declaration. Boolean tt means loose (e.g.
 % the '+' in f@{u v + | u < v +})
-kind upoly-decl type.
-builtin symbol upoly-decl : list univ.variable -> bool ->
-                             list univ-constraint -> bool -> upoly-decl = "1". 
-builtin symbol upoly-decl-cumul : list univ-variance -> bool ->
-                                   list univ-constraint -> bool ->
-                                   upoly-decl = "1". 
+builtin data upoly-decl.
+builtin symb upoly-decl       : list univ.variable -> bool ->
+                                list univ-constraint -> bool -> upoly-decl = "1". 
+builtin symb upoly-decl-cumul : list univ-variance -> bool ->
+                                list univ-constraint -> bool -> upoly-decl = "1". 
 
 % -- Primitive --------------------------------------------------------
 
-data uint63.
+kind uint63 type.
 
 
-data float64.
+kind float64 type.
 
 
-data pstring.
+kind pstring type.
 
 
-data projection.
+kind projection type.
 
 
-data parray.
+kind parray type.
 
 
 % Primitive values
@@ -1538,7 +1536,7 @@ builtin func coq.arguments.reset-simplification gref.
 builtin func coq.locate-abbreviation id -> abbreviation.
 
 % Name of an abbreviation
-data abbreviation.
+kind abbreviation type.
 
 
 % [coq.notation.add-abbreviation Name Nargs Body OnlyParsing Abbreviation]
@@ -1651,7 +1649,7 @@ builtin symb coq.redflags.const : constant -> coq.redflag = "1".  % enable/disab
 builtin symb coq.redflags.proj  : projection -> coq.redflag = "1".  % enable/disable unfolding
 
 % Set of flags for lazy, cbv, ... reductions
-data coq.redflags.
+kind coq.redflags type.
 
 builtin symb coq.redflags.nored : coq.redflags = "1".
 builtin symb coq.redflags.zeta : coq.redflags = "1".
@@ -1751,7 +1749,7 @@ builtin func coq.strategy.get constant -> conversion_strategy.
 % -- Coq's tactics --------------------------------------------
 
 % LTac1 tactic expression
-data ltac1-tactic.
+kind ltac1-tactic type.
 
 
 % [coq.ltac.fail Level ...] Interrupts the Elpi program and calls Ltac's
@@ -1900,7 +1898,7 @@ builtin func coq.option.add list string, coq.option, bool.
 % between backticks, e.g. `x` or `_` for anonymous. Important: these are
 % just printing hints with no meaning, hence in elpi two name are always
 % related: `x` = `y`
-data name.
+kind name type.
 
 
 % [coq.name-suffix Name Suffix NameSuffix] suffixes a Name with a string or
@@ -2109,11 +2107,11 @@ builtin func coq.elpi.accumulate-clauses scope, id, list clause.
 
 % [coq.elpi.clear-univs Diagnostic]  
 %     Clears the existential variables and universes from the state 
-external func coq.elpi.clear-univs -> diagnostic.
+builtin func coq.elpi.clear-univs -> diagnostic.
 
 % [coq.elpi.abstract-clause-univs Clause AClause] 
 % Abstract universes of the clause as pi quantifications
-external func coq.elpi.abstract-clause-univs prop -> prop.
+builtin func coq.elpi.abstract-clause-univs prop -> prop.
 
 % Specify if a predicate argument is in input or output mode
 builtin data argument_mode.
@@ -2160,7 +2158,7 @@ builtin symb import-module             : modpath -> synterp-action = "1".
 builtin symb export-module             : modpath -> synterp-action = "1". 
 
 % Synterp action group
-data group.
+kind group type.
 
 
 % [coq.next-synterp-action A] Get the next action performed during parsing

@@ -27,13 +27,13 @@ builtin func (pi) (func A).
 
 builtin func (sigma) (func A).
 
-data int.
+kind int type.
 
 
-data string.
+kind string type.
 
 
-data float.
+kind float type.
 
 
 builtin pred (;) (pred), (pred).
@@ -308,7 +308,7 @@ builtin func print any.. .
 func counter string -> int.
 counter C N :- trace.counter C N.
 
-data loc.
+kind loc type.
 
 
 % [loc.fields Loc File StartChar StopChar Line LineStartsAtChar] Decomposes
@@ -423,7 +423,7 @@ builtin func new_int -> int.
 builtin func findall_solutions (pred) -> list (pred).
 
 % Holds data across bracktracking; can only contain closed terms
-data safe.
+kind safe type.
 
 
 % [new_safe Safe] creates a safe: a store that persists across backtracking
@@ -1577,11 +1577,11 @@ elements (node L E R _) Acc X :-
 
 %  -- I/O --
 
-data in_stream.
+kind in_stream type.
 
 builtin symb std_in : in_stream = "1".
 
-data out_stream.
+kind out_stream type.
 
 builtin symb std_err : out_stream = "1".
 builtin symb std_out : out_stream = "1".
@@ -1672,33 +1672,6 @@ builtin func sys.getcwd -> string, diagnostic.
 % [DirPath] or [Diagnostic = error Msg] and [Msg] describes an encountered
 % system error.
 builtin func sys.readdir string -> list string, diagnostic.
-
-% [sys.chdir DirPath Diagnostic] is like [Sys.chdir]. It succeeds if
-% [Diagnostic = ok] and the current working directory is updated to
-% [DirPath] or [Diagnostic = error Msg] and [Msg] describes an encountered
-% system error.
-external func sys.chdir string -> diagnostic.
-
-% [sys.mkdir DirPath Permissions Diagnostic] is like [Sys.mkdir]. It
-% succeeds if [Diagnostic = ok] and the directory [DirPath] is created or
-% [Diagnostic = error Msg] and [Msg] describes an encountered system error.
-external func sys.mkdir string, int -> diagnostic.
-
-% [sys.rmdir DirPath Diagnostic] is like [Sys.rmdir]. It succeeds if
-% [Diagnostic = ok] and the directory [DirPath] is removed or [Diagnostic =
-% error Msg] and [Msg] describes an encountered system error.
-external func sys.rmdir string -> diagnostic.
-
-% [sys.getcwd DirPath Diagnostic] is like [Sys.getcwd]. It succeeds if
-% [Diagnostic = ok] and [DirPath] is the current working directory or
-% [Diagnostic = error Msg] and [Msg] describes an encountered system error.
-external func sys.getcwd -> string, diagnostic.
-
-% [sys.readdir DirPath Contents Diagnostic] is like [Sys.readdir]. It
-% succeeds if [Diagnostic = ok] and [Contents] is the list of files in
-% [DirPath] or [Diagnostic = error Msg] and [Msg] describes an encountered
-% system error.
-external func sys.readdir string -> list string, diagnostic.
 
 %  -- Unix --
 
