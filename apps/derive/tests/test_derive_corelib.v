@@ -5,13 +5,13 @@ From elpi.apps.derive Require PrimStringEqb.
 
 Module Coverage.
 
-Inductive empty@{} := .
+Inductive empty@{} : Set := .
 
-Monomorphic Inductive mempty := with mempty' := .
+Monomorphic Inductive mempty : Set := with mempty' := .
 
-Inductive unit := tt.
+Inductive unit : Set := tt.
 
-Inductive munit := mtt with munit' := mtt'.
+Inductive munit : Set := mtt with munit' : Set := mtt'.
 
 Inductive peano := Zero | Succ (n : peano).
 
