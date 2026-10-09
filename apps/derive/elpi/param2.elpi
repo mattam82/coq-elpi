@@ -481,7 +481,8 @@ func store-param-indc string, constructor, constructor.
 store-param-indc Suffix K KR :-
   store-param {calc ({coq.gref->id (indc K)} ^ Suffix)}
     {coq.env.global (indc K)} {coq.env.global (indc K)}
-    {coq.env.global (indc KR)}.
+    {coq.env.global (indc KR)},
+  coq.elpi.clear-univs ok.
 
 %%%%%%%%%%%%%%%%%%%%%%%
 % toplevel predicates %
@@ -615,9 +616,10 @@ dispatch (indt I as GR) Suffix Clauses :- !,
     "derive.param2 generates illtyped inductive type",
 
   coq.env.add-indt DeclR IR,
-
+  coq.elpi.clear-univs ok,
   coq.env.global GR Ind,
   store-param NameR Ind Ind {coq.env.global (indt IR)},
+  coq.elpi.clear-univs ok,
 
   coq.env.indt I _ _ _ _ Knames _,
   coq.env.indt IR _ _ _ _ KnamesR _,
