@@ -82,7 +82,7 @@ Check nat_eqb_OK :
 (** Once can also run derive recursively, but this has the same bad effect,
     all generated concepts will be out of place *)
 
-Inductive a := A.
+Inductive a : Set := A.
 Inductive b := B : a -> b.
 
 #[recursive, only(eqbOK)] derive b.
