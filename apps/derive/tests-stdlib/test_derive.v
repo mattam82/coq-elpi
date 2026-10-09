@@ -10,7 +10,7 @@ Elpi derive Coverage.pair.
 Elpi derive Coverage.seq.
 Elpi derive Coverage.box_peano.
 Elpi derive Coverage.rose.
-Elpi derive Coverage.rose_p.
+(* Elpi derive Coverage.rose_p. Constraints_for issue *)
 (* Elpi derive Coverage.rose_o. Perf issue? *)
 Elpi derive Coverage.nest.
 Elpi derive Coverage.w.
