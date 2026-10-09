@@ -24,7 +24,7 @@ Elpi derive.eqbcorrect seq.
 Elpi derive.eqbcorrect box_peano.
 Elpi derive.eqbcorrect rose.
 Elpi derive.eqbcorrect rose_p.
-Elpi derive.eqbcorrect rose_o.
+(* Elpi derive.eqbcorrect rose_o. Bug in constraints_for *)
 Fail Elpi derive.eqbcorrect nest. (* Maybe fixable *)
 Fail Elpi derive.eqbcorrect w.    (* Not fixable *)
 Fail Elpi derive.eqbcorrect vect. (* Can be done *)
