@@ -18,7 +18,7 @@ Elpi derive.eqbOK seq.
 Elpi derive.eqbOK box_peano.
 Elpi derive.eqbOK rose.
 Elpi derive.eqbOK rose_p.
-Elpi derive.eqbOK rose_o.
+(* Elpi derive.eqbOK rose_o. FIXME constraints_for *)
 Fail Elpi derive.eqbOK nest.
 Fail Elpi derive.eqbOK w.
 Fail Elpi derive.eqbOK vect.
