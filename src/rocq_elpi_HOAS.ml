@@ -4656,7 +4656,6 @@ let inductive_entry2lp ~depth coq_ctx constraints state ~loose_udecl e =
       { e with sigma = merge_universe_context_set UState.univ_flexible e.sigma uctx}) in
   let upoly = ucontext_of_mind_entry univ_binders mie in
   let mie = unabstract_mind_entry univ_binders mie in
-
   let state = match upoly with
     | None -> state
     | Some cs -> S.update engine state (fun e ->
@@ -4782,15 +4781,6 @@ let record_entry2lp ~depth coq_ctx constraints state ~loose_udecl (decl:Record.R
   let i_impls = List.map binding_kind_of_manual_implicit decl.entry.param_impls in
 
   let mie = decl.entry.mie in
-  let ind = match mie.mind_entry_inds with
-  | [ x ] -> x
-  | _ -> nYI "mutual record"
-  in
-  let record = match decl.records with
-  | [ x ] -> x
-  | _ -> nYI "mutual record" in
-  let indno = 1 in
-
   let state =
     S.update engine state (fun e ->
         { e with sigma = merge_universe_context_set UState.univ_flexible e.sigma decl.entry.global_univs})
@@ -4804,6 +4794,14 @@ let record_entry2lp ~depth coq_ctx constraints state ~loose_udecl (decl:Record.R
       { e with sigma = merge_ucontext e.sigma cs }) (* ???? *) in
 
   let state, upoly_decl_of, upoly_decl_gls = upoly_decl_of ~depth state ~loose_udecl mie upoly in
+  let ind = match mie.mind_entry_inds with
+  | [ x ] -> x
+  | _ -> nYI "mutual record"
+  in
+  let record = match decl.records with
+  | [ x ] -> x
+  | _ -> nYI "mutual record" in
+  let indno = 1 in
 
   let params = mie.mind_entry_params in
   let params = Vars.lift_rel_context indno params in
