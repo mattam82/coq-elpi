@@ -854,7 +854,7 @@ let mk_indt_decl state univpoly ?univdecl r =
 [%%else]
 let mk_indt_decl state _univpoly univdecl r =
   match univdecl with
-  | NotUniversePolymorphic ->
+  | NotUniversePolymorphic | TemplatePolymorphic ->
     state, E.mkApp ideclc r []
   | NonCumulative udecl -> 
     let state, up, gls = universe_decl.API.Conversion.embed ~depth:0 state (NonCumul udecl) in
@@ -1010,7 +1010,7 @@ let ucdeclc = E.Constants.declare_global_symbol "upoly-const-decl"
 
 let make_cdecl_app ~depth state name udecl body typ gls =
   match udecl with
-  | NotUniversePolymorphic ->
+  | NotUniversePolymorphic | TemplatePolymorphic ->
     state, E.mkApp cdeclc name [body;typ], gls
   | Cumulative udecl ->
     let state, ud, gls1 = universe_decl.API.Conversion.embed ~depth state (Cumul udecl) in

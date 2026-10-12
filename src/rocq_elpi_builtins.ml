@@ -1180,7 +1180,7 @@ let declare_definition using ~cinfo ~info ~opaque ~body sigma =
 let warns_of_options options = options.user_warns |> Option.map UserWarn.with_empty_qf
 
 let add_axiom_or_variable api id ty local_bkind options state =
-  let state, poly, cumul, udecl, _ = poly_cumul_udecl_variance_of_options state options in
+  let state, _template, poly, cumul, udecl, _ = poly_cumul_udecl_variance_of_options state options in
   let used = universes_of_term state ty in
   if not (is_ground (get_sigma state) ty) then
     err Pp.(str"coq.env.add-const: the type must be ground. Did you forget to call coq.typecheck?");
@@ -2532,7 +2532,14 @@ Supported attributes:
          | Context.Named.Declaration.LocalAssum _ -> None
          end, [])),
   DocAbove);
-
+  
+  MLCode(Pred("coq.env.template?",
+    In(gref,  "GR",
+    Read (global,"tests if GR is template polymorphic")),
+  (fun gr ~depth {env} _ state ->
+    if Environ.is_template_polymorphic env gr then () else raise No_clause)),
+  DocAbove);
+  
   MLCode(Pred("coq.env.primitive?",
     In(constant,  "GR",
     Read (global,"tests if GR is a primitive constant (like uin63 addition) or a primitive type (like uint63)")),
@@ -2697,7 +2704,7 @@ Supported attributes:
   (fun body types _ ~depth {options} _ -> grab_global_env "coq.env.add-const" (fun state ->
     (* Local variables/defs cannot be polymorphic *)
     if options.local = Some true then Univ.ContextSet.empty, state, !: None, [] else
-    let state, poly, cumul, udecl, _ = poly_cumul_udecl_variance_of_options state options in
+    let state, _template, poly, cumul, udecl, _ = poly_cumul_udecl_variance_of_options state options in
     let env = get_global_env state in
     let sigma = get_sigma state in
     let poly = (make_polyflags poly cumul) in        
@@ -2786,7 +2793,7 @@ Supported attributes:
             if not (is_ground sigma ty) then
               err Pp.(str"coq.env.add-const: the type must be ground. Did you forge to call coq.typecheck?");
              Some ty in
-       let state, poly, cumul, udecl, _ = poly_cumul_udecl_variance_of_options state options in
+       let state, _template, poly, cumul, udecl, _ = poly_cumul_udecl_variance_of_options state options in
        let kind = Decls.(IsDefinition Definition) in
        let scope = if Option.has_some local_bkind
         then Locality.Discharge
@@ -2891,7 +2898,8 @@ Supported attributes:
        let open Entries in
        match me.mind_entry_universes with
        | Monomorphic_ind_entry -> (UVars.Instance.empty, Monomorphic_entry, UState.Monomorphic_entry uctx, univ_binders)
-       | Template_ind_entry _ -> nYI "template polymorphic inductives"
+       | Template_ind_entry { uctx = auctx; default_univs } ->
+        (UVars.Instance.empty, Monomorphic_entry, UState.Monomorphic_entry uctx, univ_binders)        
        | Polymorphic_ind_entry (uctx, variances) ->
           let uinst = UVars.UContext.instance (UVars.AbstractContext.repr uctx) in
           let uinst = UVars.Instance.of_level_instance uinst in
