@@ -468,6 +468,7 @@ type any_universe_decl =
 
 type universe_decl_option =
   | NotUniversePolymorphic
+  | TemplatePolymorphic
   | Cumulative of universe_decl_cumul
   | NonCumulative of universe_decl
 
@@ -1667,12 +1668,17 @@ let default_universe_decl () =
 let get_universe_decl state map =
   match API.Data.StrMap.find_opt "coq:udecl-cumul" map, API.Data.StrMap.find_opt "coq:udecl" map with
   | None, None -> 
-    (match API.Data.StrMap.find_opt "coq:mdecl" map with
-    | Some (b, depth) -> 
+    (match API.Data.StrMap.find_opt "coq:mdecl" map, API.Data.StrMap.find_opt "coq:tdecl" map with
+    | Some (b, depth), None -> 
       let _, b, _ = Elpi.Builtin.bool.API.Conversion.readback ~depth state b in
       if b then NotUniversePolymorphic
       else default_universe_decl ()
-    | None -> default_universe_decl ())
+    | None, Some (b, depth) -> 
+      let _, b, _ = Elpi.Builtin.bool.API.Conversion.readback ~depth state b in
+      if b then TemplatePolymorphic
+      else default_universe_decl ()
+    | Some _, Some _ -> err Pp.(str"Conflicting attributes: @mdecl! and @tdecl!")
+    | None, None -> default_universe_decl ())
   | Some _, Some _ -> err Pp.(str"Conflicting attributes: @udecl! and @udecl-cumul! (or @univpoly! and @univpoly-cumul!)")
   | Some (t,depth), None ->
       let _, ud, gl = universe_decl.Elpi.API.Conversion.readback ~depth state t in
@@ -3733,15 +3739,16 @@ let name_universe_level state l =
 
 let poly_cumul_udecl_variance_of_options state options =
   match options.universe_decl with
-  | NotUniversePolymorphic -> state, false, false, default_univ_decl, None
+  | NotUniversePolymorphic -> state, false, false, false, default_univ_decl, None
+  | TemplatePolymorphic -> state, true, false, false, default_univ_decl, None
   | Cumulative ((univ_lvlt_var,univdecl_extensible_instance),(univdecl_constraints,univdecl_extensible_constraints)) ->
     let univdecl_instance, variance = List.split univ_lvlt_var in
-    state, true, true,
+    state, false, true, true,
     mk_universe_decl univdecl_extensible_instance univdecl_extensible_constraints univdecl_constraints univdecl_instance,
     Some variance
   | NonCumulative((univ_lvlt,univdecl_extensible_instance),(univdecl_constraints,univdecl_extensible_constraints)) ->
     let univdecl_instance = univ_lvlt in
-    state, true, false,
+    state, false, true, false,
     mk_universe_decl univdecl_extensible_instance univdecl_extensible_constraints univdecl_constraints univdecl_instance,
     None
 
@@ -3792,7 +3799,7 @@ let comInductive_interp_mutual_inductive_constr ~sigma ~cumulative ~poly ~templa
   let poly = PolyFlags.set_solve_term_variables poly in
   let flags = {
     ComInductive.poly = poly;
-    template = Some false;
+    template = template;
     finite;
     mode = None;
     schemes = Default;
@@ -3884,10 +3891,10 @@ let lp2inductive_entry ~depth coq_ctx constraints state t =
       (state,[]) ks in
     let knames, ktypes, kparams, kimpls = CList.split4 names_ktypes in
             
-    let state, poly, cumulative, udecl, variances =
+    let state, template, poly, cumulative, udecl, variances =
       poly_cumul_udecl_variance_of_options state coq_ctx.options in
     let sigma = get_sigma state in
-
+    
     (* Handling of non-uniform parameters *)
     let nupno = List.length nuparams in
     let ktypes = CList.map3 (check_consistency_and_drop_nuparams sigma nuparams) knames kparams ktypes in
@@ -3926,7 +3933,7 @@ let lp2inductive_entry ~depth coq_ctx constraints state t =
       let sigma = fix_udecl_variables udecl sigma in
        state, comInductive_interp_mutual_inductive_constr
          ~sigma
-         ~template:(Some false)
+         ~template:(Some template)
          ~poly
          ~cumulative
          ~udecl
@@ -4043,7 +4050,7 @@ let lp2inductive_entry ~depth coq_ctx constraints state t =
           else err Pp.(str"mblock: cannot mix inductive and coinductive declarations") in
     let state, (melims, mind, ubinders, uctx) =
       let private_ind = false in
-      let state, poly, cumulative, udecl, variances =
+      let state, template, poly, cumulative, udecl, variances =
         poly_cumul_udecl_variance_of_options state coq_ctx.options in
       let ind_types =
         List.mapi (fun i (name, arity) ->
@@ -4074,7 +4081,7 @@ let lp2inductive_entry ~depth coq_ctx constraints state t =
       let sigma = get_sigma state in
       state, comInductive_interp_mutual_inductive_constr
         ~sigma
-        ~template:(Some false)
+        ~template:(Some template)
         ~udecl
         ~variances
         ~ctx_params:params
@@ -4426,16 +4433,34 @@ let find_structure env ind = Structures.Structure.find env ind
 
 
 [%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
-let get_template_instance mind uinst = uinst
+let get_template_instance _poly mind uinst = uinst
 [%%elif coq = "9.3"]
-let get_template_instance mind uinst = match mind.Declarations.mind_template with
+let get_template_instance _poly mind uinst = match mind.Declarations.mind_template with
 | None -> uinst
 | Some templ -> templ.template_defaults
 [%%else]
-let get_template_instance mind uinst = match Declareops.inductive_template mind with
-| None -> uinst
-| Some templ -> UVars.Instance.of_level_instance templ.template_defaults
+let get_template_instance poly mind uinst state = match Declareops.inductive_template mind with
+| None -> state, uinst
+| Some templ -> 
+  if poly then
+    let inst, ctx = UnivGen.fresh_instance_from templ.template_context None in
+    let state = update_sigma state (fun sigma -> Evd.merge_sort_context_set Evd.univ_rigid sigma ctx) in
+    state, inst
+  else 
+    state, UVars.Instance.of_level_instance templ.template_defaults
 [%%endif]
+
+let type_of_inductive ((mib,mip),u) =
+  let open Declarations in
+  match Declareops.(inductive_template mib) with
+  | None ->
+    let cst = Inductive.instantiate_inductive_constraints mib u in
+    Vars.subst_instance_constr u mip.mind_user_arity, cst
+  | Some templ ->
+    let cst, params, subst = Inductive.instantiate_template_universes mib ~inst:u [] in
+    let ctx = (CList.firstn mip.mind_nrealdecls mip.mind_arity_ctxt) @ params in
+    let s = Inductive.Template.template_subst_sort subst templ.template_concl in
+    Term.mkArity (ctx, s), cst
 
 let inductive_decl2lp ~depth coq_ctx constraints state (mutind,uinst,mind,(i_impls,k_impls)) =
   let { Declarations.mind_params_ctxt;
@@ -4443,7 +4468,14 @@ let inductive_decl2lp ~depth coq_ctx constraints state (mutind,uinst,mind,(i_imp
         mind_nparams = allparamsno;
         mind_nparams_rec = paramsno;
       } = mind in
-  let t_uinst = get_template_instance mind uinst in
+  let poly = match coq_ctx.options.universe_decl with
+    | NotUniversePolymorphic | TemplatePolymorphic -> false
+    | NonCumulative _ | Cumulative _ -> true
+  in
+  (* In polymorphic mode when fetching a template polymorphic inductive, 
+     we get a refreshed instance of the template polymorphic inductive, 
+     avoiding capture of template-poly universes. *)
+  let state, t_uinst = get_template_instance poly mind uinst state in
   let ntyps = Array.length mind.mind_packets in
   let mind_params_ctxt = Vars.subst_instance_context t_uinst mind_params_ctxt in
   let allparams = List.map EConstr.of_rel_decl mind_params_ctxt in
@@ -4467,7 +4499,7 @@ let inductive_decl2lp ~depth coq_ctx constraints state (mutind,uinst,mind,(i_imp
     let constructor_types =
       constructor_types |> Array.map (fun (ctx,ty) ->
         Vars.subst_instance_context t_uinst ctx, Vars.subst_instance_constr t_uinst ty) in
-    let arity_w_params = Inductive.type_of_inductive ((mind,ind),uinst) in
+    let arity_w_params, _ = type_of_inductive ((mind,ind),t_uinst) in
     if mind_record = Declarations.NotRecord then
       let typ = drop_nparams_from_term allparamsno arity_w_params in
       let constructor_names = Array.to_list constructor_names in

@@ -516,6 +516,7 @@ macro @uinstance! I :- get-option "coq:uinstance" I. % universe instance
 % mention all universe constraints actually required to type check the
 % declaration)
 macro @mdecl!                   :- get-option "coq:mdecl" tt.
+macro @tdecl!                   :- get-option "coq:tdecl" tt.
 macro @udecl! Vs LV Cs LC       :- get-option "coq:udecl" (upoly-decl Vs LV Cs LC).
 macro @udecl-cumul! Vs LV Cs LC :- get-option "coq:udecl-cumul" (upoly-decl-cumul Vs LV Cs LC).
 macro @univpoly!       :- @udecl! [] tt [] tt.
@@ -757,6 +758,9 @@ builtin func coq.env.const constant -> option term, term.
 % Supported attributes:
 % - @uinstance! I (default: fresh instance I)
 builtin func coq.env.const-body constant -> option term.
+
+% [coq.env.template? GR] tests if GR is template polymorphic
+builtin func coq.env.template? gref.
 
 % [coq.env.primitive? GR] tests if GR is a primitive constant (like uin63
 % addition) or a primitive type (like uint63)
