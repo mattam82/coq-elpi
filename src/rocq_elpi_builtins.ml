@@ -2959,8 +2959,11 @@ Supported attributes:
      let sigma = get_sigma state in
      if not (is_mutual_inductive_entry_ground me sigma) then
        err Pp.(str"coq.env.add-indt: the inductive type declaration must be ground. Did you forget to call coq.typecheck-indt-decl?");
-     let primitive_expected = match record_info with Some(p, _) -> p | _ -> false in
-     let (uinst, uentry, uentry', ubinders) =
+     let me, primitive_expected = match record_info with
+      | Some(p, _ :: _) -> me, p 
+      | Some _ -> { me with mind_entry_record = Some None }, false
+      |  _ -> me, false in
+     let (uinst, uentry, uentry', ubinders) = 
        let open Entries in
        match me.mind_entry_universes with
        | Monomorphic_ind_entry -> (UVars.Instance.empty, Monomorphic_entry, UState.Monomorphic_entry uctx, univ_binders)
