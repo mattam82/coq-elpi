@@ -464,7 +464,13 @@ let detype_universe sigma u =
   Glob_term.UNamed (List.map (Util.on_fst (detype_level_name sigma)) (Univ.Universe.repr u))
 
 (* Fixed version from Glob_ops *)
-let glob_univ_flexible = Glob_term.UAnonymous {rigid=Some UState.univ_flexible}
+let glob_univ flex = Glob_term.UAnonymous {rigid=Some flex}
+
+let detype_anon_universe sigma u =
+  let levels = Univ.Universe.levels u in 
+  if Univ.Level.Set.for_all (Evd.is_flexible_level sigma) levels then
+    glob_univ UState.univ_flexible
+  else glob_univ UState.univ_rigid
 
 let detype_sort ku sigma x =
   let open Sorts in
@@ -476,8 +482,8 @@ let detype_sort ku sigma x =
   | Type u when ku -> None, detype_universe sigma u
   | VSort (q, u) when ku -> Some (detype_qvar sigma q), detype_universe sigma u
   | GSort (q, u) -> Some (detype_quality sigma (QGlobal q)), 
-    if ku then detype_universe sigma u else glob_univ_flexible
-  | _ -> None, glob_univ_flexible
+    if ku then detype_universe sigma u else detype_anon_universe sigma u
+  | Type u | VSort (_, u) -> None, detype_anon_universe sigma u
 [%%endif]
 
 (*
