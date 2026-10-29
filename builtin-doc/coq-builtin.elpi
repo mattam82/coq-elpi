@@ -679,6 +679,13 @@ builtin func coq.env.typeof gref -> term.
 % - @uinstance! I (default: fresh instance I)
 builtin func coq.env.global -> gref, term.
 
+% [coq.env.fresh-global GR T] turns a global reference GR into a term T =
+% (global GR I) with a fresh universe instance I.
+% Unlike coq.env.global, it only works in this direction and reads no
+% attribute (@uinstance! is ignored), which makes it cheaper under a large
+% hypothetical context.
+builtin func coq.env.fresh-global gref -> term.
+
 builtin func coq.env.indt % reads the inductive type declaration for the environment.
 % Supported attributes:
 % - @uinstance! I (default: fresh instance I)
