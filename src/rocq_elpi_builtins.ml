@@ -2304,6 +2304,19 @@ Supported attributes:
     | None, None -> err Pp.(str "coq.env.global: no input, all arguments are variables"))),
   DocAbove);
 
+  MLCode(Pred("coq.env.fresh-global",
+    In(gref, "GR",
+    Out(B.poly "term", "T",
+    Full(unit_ctx, {|turns a global reference GR into a term T = (global GR I) with a fresh universe instance I.
+Unlike coq.env.global, it only works in this direction and reads no attribute (@uinstance! is ignored), which makes it cheaper under a large hypothetical context.|}))),
+  (fun gr _ ~depth () () state ->
+    let state, t, _ = mk_global state gr None in
+    let ctx = empty_conv_context ~options:(default_options ()) state in
+    let state, t, gls =
+      closed_ground_term.CConv.embed ~depth ctx E.no_constraints state t in
+    state, !: t, gls)),
+  DocAbove);
+
   MLCode(Pred("coq.env.indt",
     In(inductive, "reference to the inductive type",
     Out(bool, "tt if the type is inductive (ff for co-inductive)",
