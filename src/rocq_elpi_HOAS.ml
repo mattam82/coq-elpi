@@ -1695,22 +1695,95 @@ let get_universe_decl state map =
     | Cumul _ -> U.type_error "@udecl! containing a cumulative declaration"
     end
 
-let get_options ~depth hyps state =
-  let is_string ~depth t =
-    match E.look ~depth t with
-    | E.CData d -> CD.is_string d
-    | _ -> false in
-  let get_string ~depth t =
-    match E.look ~depth t with
-    | E.CData d -> CD.to_string d
-    | _ -> assert false in
+(* The get-option entries of a hypothetical context, as a map from the option
+   name to its (unread) value and the depth of the hypothesis. The innermost
+   (first) entry for a name wins. *)
+let scan_options hyps =
+  let cacheable = ref true in
   let options =
     hyps |> CList.map_filter (fun { E.hdepth = depth; E.hsrc = t } ->
     match E.look ~depth t with
-    | E.App(c,name,[p]) when c == get_optionc && is_string ~depth name ->
-        Some (get_string ~depth name, (p,depth))
+    | E.App(c,name,[p]) when c == get_optionc ->
+        let v = E.look ~depth name in
+        (* [look] returns its argument unless it had to dereference an
+           assigned unification variable, which backtracking could unassign *)
+        if Obj.repr v != Obj.repr name then cacheable := false;
+        begin match v with
+        | E.CData d when CD.is_string d -> Some (CD.to_string d, (p,depth))
+        | _ -> cacheable := false; None
+        end
     | _ -> None) in
   let map = List.fold_right (fun (k,v) m -> API.Data.StrMap.add k v m) options API.Data.StrMap.empty in
+  map, !cacheable
+
+(* A term without unification variables, assigned or not. [look] returns its
+   argument unless it had to dereference a unification variable (or to
+   eta-contract a lambda, which only makes this test more conservative). *)
+let rec no_uvars ~depth t =
+  let v = E.look ~depth t in
+  Obj.repr v == Obj.repr t &&
+  match v with
+  | E.Const _ | E.Nil | E.CData _ -> true
+  | E.App(_,x,xs) -> no_uvars ~depth x && List.for_all (no_uvars ~depth) xs
+  | E.Cons(x,xs) -> no_uvars ~depth x && no_uvars ~depth xs
+  | E.Lam b -> no_uvars ~depth:(depth+1) b
+  | E.Builtin(_,l) -> List.for_all (no_uvars ~depth) l
+  | E.UnifVar _ -> false
+
+(* Options read by [get_options] whose readback may depend on the state, or
+   which determine the universe declaration *)
+let uncacheable_options =
+  ["coq:uinstance"; "coq:udecl"; "coq:udecl-cumul"; "coq:mdecl"; "coq:tdecl"]
+
+(* Options read by [get_options] with a pure readback *)
+let cacheable_options = [
+  "coq:deprecation"; "coq:warn"; "HOAS:holes"; "coq:locality"; "coq:primitive";
+  "coq:ppwidth"; "coq:pp"; "coq:pplevel"; "coq:using"; "coq:inline";
+  "coq:reversible"; "coq:no_tc"; "coq:keepunivs"; "coq:redflags";
+  "coq:keepalgunivs" ]
+
+(* One-entry cache for [get_options]. Builtins are often called many times in
+   a row under the same hypothetical context, which can be long (e.g. HB loads
+   its databases with [Clauses => ...]), and the runtime then passes the very
+   same (immutable) list.
+
+   We always cache the structure of the context, i.e. which hypotheses are
+   [get-option "name" V] and their position. The head of a hypothesis is
+   rigid (the runtime rejects flexible heads), but its name could be a
+   unification variable: a context with such an entry, assigned or not, is
+   not cached.
+
+   The values V may contain unification variables that are assigned (or
+   unassigned by backtracking) between two calls, so we also cache the
+   options computed from them only if the values read by [get_options] contain
+   no unification variable at all and have a readback that does not depend on
+   the state. The universe declaration is then the default one, which depends
+   on global flags that the program may change (e.g. with coq.option.set), so
+   it is recomputed at each call. *)
+type options_cache_entry = {
+  c_hyps : E.hyps;
+  c_map : (E.term * int) API.Data.StrMap.t;
+  c_record_cacheable : bool;
+  mutable c_record : options option;
+}
+let options_cache : options_cache_entry option ref = ref None
+
+let options_cache_entry hyps =
+  match !options_cache with
+  | Some ({ c_hyps } as e) when c_hyps == hyps -> e
+  | _ ->
+    let map, cacheable = scan_options hyps in
+    let c_record_cacheable =
+      List.for_all (fun n -> not (API.Data.StrMap.mem n map)) uncacheable_options &&
+      List.for_all (fun n ->
+        match API.Data.StrMap.find_opt n map with
+        | None -> true
+        | Some (t,depth) -> no_uvars ~depth t) cacheable_options in
+    let e = { c_hyps = hyps; c_map = map; c_record_cacheable; c_record = None } in
+    options_cache := if cacheable then Some e else None;
+    e
+
+let compute_options map state =
   let get_bool_option name =
     try
       let t, depth = API.Data.StrMap.find name map in
@@ -1809,6 +1882,16 @@ let get_options ~depth hyps state =
     make_options ~hoas_holes ~local ~warn ~depr ~primitive ~failsafe ~ppwidth
       ~pp ~pplevel ~using ~inline ~uinstance ~universe_decl ~reversible ~keepunivs
       ~redflags ~no_tc ~algunivs
+
+let get_options ~depth hyps state =
+  let e = options_cache_entry hyps in
+  match e.c_record with
+  | Some o -> { o with universe_decl = default_universe_decl () }
+  | None ->
+    let o = compute_options e.c_map state in
+    if e.c_record_cacheable then e.c_record <- Some o;
+    o
+
 let empty_conv_context ~options state =
   let env = get_global_env state in
   let section = section_ids env in
