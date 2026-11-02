@@ -896,7 +896,10 @@ let globalc = E.Constants.declare_global_symbol "global"
 module GrefCache = Hashtbl.Make(GlobRef.UserOrd)
 let cache = GrefCache.create 13
 
+let gref_instances_flag, _ = CDebug.create_full ~name:"elpi-gref-instances" ()
+
 let assert_in_elpi_gref_consistent gr inst =
+  if not (CDebug.get_flag gref_instances_flag) then () else
   let univs = Global.universes_of_global gr in
   if UVars.AbstractContext.size univs = UVars.Instance.length inst then ()
   else
@@ -916,7 +919,6 @@ let in_elpiast_gr ~loc r =
   A.mkAppGlobal ~loc  ~hdloc:loc globalc (in_elpiast_gref ~loc r) [i]
 
 let in_elpi_poly_gr ~depth s r i =
-  assert_in_elpi_gref_consistent r i;
   let open API.Conversion in
   let s, t, gl = gref.embed ~depth s r in
   assert (gl = []);
@@ -928,8 +930,8 @@ let in_elpiast_poly_gr ~loc r i =
   A.mkAppGlobal ~loc ~hdloc:loc globalc t [i]
 
 let in_elpi_poly_gr_instance ~depth s r i =
-  assert_in_elpi_gref_consistent r i;
   in_elpi_poly_gr ~depth s r i
+
 let in_elpiast_poly_gr_instance ~loc r i =
   assert_in_elpi_gref_consistent r i;
   let t = in_elpiast_gref ~loc r in
