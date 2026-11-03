@@ -284,7 +284,8 @@ let attributes_of_flags flags =
   let polyflag =
     CAst.make ("polymorphic", VernacFlagLeaf (FlagQualid (if PolyFlags.univ_poly flags then yes else no))) in
   let polyflag = CAst.make ("universes", VernacFlagList [polyflag;cumflag]) in
-  [polyflag]
+  (* Monomorphic declarations get no attribute: not every command supports [universes] *)
+  if PolyFlags.univ_poly flags then [polyflag] else []
 [%%endif]
 
 [%%if coq = "9.0" || coq = "9.1" || coq = "9.2"]
