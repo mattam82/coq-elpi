@@ -142,8 +142,8 @@ Elpi Query lp:{{get-option "of:coerce" tt =>
   (of {{true :: nil}} {{list Z}} Res).
 }}.
 
-Axiom ring@{u} : Type@{u}.
-Axiom carr@{u} : ring@{u} -> Type@{u}.
+Axiom ring : Type.
+Axiom carr : ring -> Type.
 
 Elpi Accumulate lp:{{
   coerce (global {{:gref ring}} U) (sort _) X {{ lp:C lp:X }} :- C = global {{:gref carr}} U.
