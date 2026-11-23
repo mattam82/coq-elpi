@@ -237,6 +237,7 @@ coq.upoly-decl.complete-constraints (upoly-decl-cumul VS LV CS LC) (upoly-decl-c
 func coq.upoly-decl-cumul.complete-constraints.aux univ-variance -> list univ-constraint.
 coq.upoly-decl-cumul.complete-constraints.aux (auto V) CS :- coq.univ.variable.constraints V CS.
 coq.upoly-decl-cumul.complete-constraints.aux (covariant V) CS :- coq.univ.variable.constraints V CS.
+coq.upoly-decl-cumul.complete-constraints.aux (contravariant V) CS :- coq.univ.variable.constraints V CS.
 coq.upoly-decl-cumul.complete-constraints.aux (invariant V) CS :- coq.univ.variable.constraints V CS.
 coq.upoly-decl-cumul.complete-constraints.aux (irrelevant V) CS :- coq.univ.variable.constraints V CS.
 

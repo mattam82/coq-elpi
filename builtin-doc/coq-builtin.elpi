@@ -1216,10 +1216,11 @@ symb eq : univ -> univ -> univ-constraint = "rocq.1".
 
 % Variance of a universe level variable
 data univ-variance.
-symb auto       : univ.variable -> univ-variance. 
-symb covariant  : univ.variable -> univ-variance. 
-symb invariant  : univ.variable -> univ-variance. 
-symb irrelevant : univ.variable -> univ-variance. 
+symb auto          : univ.variable -> univ-variance. 
+symb covariant     : univ.variable -> univ-variance. 
+symb contravariant : univ.variable -> univ-variance. 
+symb invariant     : univ.variable -> univ-variance. 
+symb irrelevant    : univ.variable -> univ-variance. 
 
 % Constraints for a polymorphic declaration. Boolean tt means loose (e.g.
 % the '+' in f@{u v + | u < v +})

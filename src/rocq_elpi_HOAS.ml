@@ -453,6 +453,9 @@ let universe_variance : (Univ.Level.t * UVars.Variance.t option) API.Conversion.
     K("covariant","",A(universe_level_variable,N),
       B (fun u -> u,Some UVars.Variance.Covariant),
       M (fun ~ok ~ko -> function (u,Some UVars.Variance.Covariant) -> ok u | _ -> ko ()));
+    K("contravariant","",A(universe_level_variable,N),
+      B (fun u -> u,Some UVars.Variance.Contravariant),
+      M (fun ~ok ~ko -> function (u,Some UVars.Variance.Contravariant) -> ok u | _ -> ko ()));
     K("invariant","",A(universe_level_variable,N),
       B (fun u -> u,Some UVars.Variance.Invariant),
       M (fun ~ok ~ko -> function (u,Some UVars.Variance.Invariant) -> ok u | _ -> ko ()));
