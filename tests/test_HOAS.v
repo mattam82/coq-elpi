@@ -332,7 +332,10 @@ Elpi Query lp:{{
 }}.
 
 #[universes(polymorphic,cumulative=no)] Record F (T : Type) := Build_F { t : T }.
-Polymorphic Definition fnat : F nat := {| t := 0%nat |}.
+(* At Set explicitly: inferred, the instance of F in the type is kept, the
+   transparent body using F's constructor at a type of that universe; the query
+   on [unify-eq] below needs an instance of [fnat] that does not fit [F]'s *)
+Polymorphic Definition fnat@{} : F@{Set} nat := {| t := 0%nat |}.
 
 Elpi Query lp:{{
   T = {{ @t nat fnat }},
